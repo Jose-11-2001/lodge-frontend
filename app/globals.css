@@ -1,26 +1,85 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,500;9..144,700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #070b17;
+  --panel: rgba(20, 29, 51, 0.72);
+  --card: rgba(23, 33, 58, 0.85);
+  --line: rgba(120, 150, 220, 0.14);
+  --line-2: rgba(120, 150, 220, 0.28);
+  --text: #eef3ff;
+  --muted: #94a5c8;
+  --accent: #6ea8ff;
+  --accent-2: #a78bfa;
+  --accent-3: #22d3a8;
+  --gold: #f6c86a;
+  --danger: #ff6b7e;
+  --warn: #ffb547;
+  --grad-1: linear-gradient(135deg, #6ea8ff 0%, #a78bfa 55%, #f472b6 100%);
+  --grad-2: linear-gradient(135deg, #22d3a8 0%, #6ea8ff 100%);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 12px 40px rgba(110, 168, 255, 0.28);
+  --radius: 16px;
+  --trans: 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html[data-theme="light"] {
+  --bg: #f4f6fb;
+  --panel: rgba(255, 255, 255, 0.78);
+  --card: rgba(255, 255, 255, 0.9);
+  --line: rgba(40, 60, 110, 0.10);
+  --line-2: rgba(40, 60, 110, 0.18);
+  --text: #0d1730;
+  --muted: #5b6b8a;
+  --shadow-sm: 0 2px 10px rgba(20, 40, 90, 0.08);
+  --shadow-md: 0 12px 32px rgba(20, 40, 90, 0.14);
+  --shadow-glow: 0 12px 40px rgba(110, 168, 255, 0.35);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  font-family: 'Plus Jakarta Sans', system-ui, Segoe UI, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* Animated aurora background */
+.aurora {
+  position: fixed;
+  inset: -20%;
+  pointer-events: none;
+  z-index: -1;
+  filter: blur(60px);
+  opacity: 0.55;
+  background:
+    radial-gradient(40% 40% at 15% 20%, #6ea8ff88, transparent 60%),
+    radial-gradient(40% 40% at 85% 15%, #a78bfa66, transparent 60%),
+    radial-gradient(40% 40% at 50% 95%, #22d3a866, transparent 60%);
+  animation: auroraMove 22s ease-in-out infinite alternate;
+}
+
+html[data-theme="light"] .aurora {
+  opacity: 0.35;
+}
+
+@keyframes auroraMove {
+  0% { transform: translate(-2%, -2%) scale(1); }
+  50% { transform: translate(2%, 1%) scale(1.08); }
+  100% { transform: translate(-1%, 2%) scale(1.02); }
+}
+
+.font-fraunces {
+  font-family: 'Fraunces', serif;
 }
