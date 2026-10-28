@@ -76,6 +76,21 @@ export interface HallBooking {
   paymentMethod: string | null;
 }
 
+export interface MealOrder {
+  id: number;
+  mealId: number;
+  mealName: string;
+  customerUsername: string;
+  quantity: number;
+  serveAt: string;
+  totalPrice: number;
+  status: BookingStatus;
+  createdAt: string;
+  paid: boolean;
+  paymentReference: string | null;
+  paymentMethod: string | null;
+}
+
 export interface Feedback {
   id: number;
   customerUsername: string;
