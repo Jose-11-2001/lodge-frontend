@@ -157,6 +157,7 @@ export interface PaymentInitiationResponse {
 export interface FeedbackDto {
   id: number;
   customerUsername: string;
+  bookingId?: number | null;   // ← ADDED
   rating: number;
   comment?: string;
   resolved: boolean;
