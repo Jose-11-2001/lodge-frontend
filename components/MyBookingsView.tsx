@@ -26,7 +26,7 @@ interface Props<T extends Row> {
   rows: T[];
   getAmount: (row: T) => number;
   columns: { label: string; render: (row: T) => React.ReactNode }[];
-  onPay: (id: number, method: string) => void;
+ onPay: (id: number, method: import('@/types').PaymentMethod) => void;
   onCancel: (id: number) => void;
 }
 
