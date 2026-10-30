@@ -26,7 +26,8 @@ const USER_KEY = 'lodge_username';
 // Types (mirror your /v3/api-docs schemas)
 // ─────────────────────────────────────────────────────────────
 
-export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+// CHANGED: added 'COMPLETED' so the UI can filter on it
+export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 export type PaymentMethod = 'CARD' | 'MOBILE_MONEY' | 'BANK_TRANSFER' | 'CASH';
 export type HallBillingMode = 'HOURLY' | 'DAILY';
 export type Role = 'ADMIN' | 'CUSTOMER';
@@ -47,7 +48,7 @@ export interface RoomDto {
   totalRooms: number;
   availableRooms: number;
   primaryImage?: string;
-  images: string[];
+  images?: string[]; // CHANGED: was required
   amenities: string[];
 }
 
@@ -66,7 +67,8 @@ export interface MealDto {
   mealType?: MealType;
   description?: string;
   price: number;
-  images: string[];
+  primaryImage?: string; // CHANGED: added
+  images?: string[];     // CHANGED: was required
 }
 
 export interface MealRequest {
@@ -86,7 +88,7 @@ export interface HallDto {
   pricePerDay?: number;
   available?: boolean;
   primaryImage?: string;
-  images: string[];
+  images?: string[]; // CHANGED: was required
 }
 
 export interface HallRequest {

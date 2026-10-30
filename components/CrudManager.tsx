@@ -43,6 +43,7 @@ export default function CrudManager<
   noun,
   emptyText,
   items,
+   icon?: string; 
   fields,
   columns,
   onCreate,
@@ -53,6 +54,7 @@ export default function CrudManager<
   const admin = useRequireAdmin();
   const [editing, setEditing] = useState<T | 'new' | null>(null);
   const [form, setForm] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
 
   if (!admin) return null;
 
@@ -64,7 +66,7 @@ export default function CrudManager<
         : undefined;
       if (Array.isArray(raw)) next[f.key] = raw.join(', ');
       else if (raw !== undefined && raw !== null) next[f.key] = String(raw);
-      else next[f.key] = f.type === 'select' ? f.options![0] : '';
+      else next[f.key] = f.type === 'select' ? f.options?.[0] ?? '' : '';
     });
     setForm(next);
     setEditing(item ?? 'new');
@@ -72,15 +74,20 @@ export default function CrudManager<
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+    setBusy(true);
     try {
       const values: Record<string, unknown> = {};
       fields.forEach((f) => {
         const raw = (form[f.key] ?? '').trim();
+        if (!raw && !f.optional && f.type !== 'image')
+          throw new Error(`${f.label} is required`);
         if (f.type === 'image') {
+          if (!raw && !f.optional)
+            throw new Error(`${f.label} is required`);
           values[f.key] = form[f.key] ?? '';
           return;
         }
-        if (!raw && !f.optional) throw new Error(`${f.label} is required`);
         if (f.type === 'number') {
           const n = Number(raw);
           if (Number.isNaN(n) || n < 0)
@@ -105,6 +112,8 @@ export default function CrudManager<
       setEditing(null);
     } catch (err) {
       notify((err as Error).message, true);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -196,64 +205,71 @@ export default function CrudManager<
 
       <Modal
         isOpen={editing !== null}
-        onClose={() => setEditing(null)}
+        onClose={() => !busy && setEditing(null)}
         title={editing === 'new' ? `New ${noun}` : `Edit ${noun}`}
       >
         <form onSubmit={submit}>
-          {fields.map((f) => (
-            <div className="field" key={f.key}>
-              <label>
-                {f.label}
-                {f.optional ? ' (optional)' : ''}
-              </label>
-              {f.type === 'textarea' ? (
-                <textarea
-                  rows={3}
-                  value={form[f.key] ?? ''}
-                  placeholder={f.placeholder}
-                  onChange={(e) =>
-                    setForm({ ...form, [f.key]: e.target.value })
-                  }
-                />
-              ) : f.type === 'select' ? (
-                <select
-                  value={form[f.key] ?? ''}
-                  onChange={(e) =>
-                    setForm({ ...form, [f.key]: e.target.value })
-                  }
-                >
-                  {f.options!.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              ) : f.type === 'image' ? (
-                <ImageField
-                  value={form[f.key] ?? ''}
-                  onChange={(v) => setForm({ ...form, [f.key]: v })}
-                />
-              ) : (
-                <input
-                  type={f.type === 'number' ? 'number' : 'text'}
-                  min={f.type === 'number' ? 0 : undefined}
-                  step={f.type === 'number' ? 'any' : undefined}
-                  value={form[f.key] ?? ''}
-                  placeholder={f.placeholder}
-                  onChange={(e) =>
-                    setForm({ ...form, [f.key]: e.target.value })
-                  }
-                />
-              )}
-            </div>
-          ))}
+          {fields.map((f) => {
+            const id = `field-${f.key}`;
+            return (
+              <div className="field" key={f.key}>
+                <label htmlFor={id}>
+                  {f.label}
+                  {f.optional ? ' (optional)' : ''}
+                </label>
+                {f.type === 'textarea' ? (
+                  <textarea
+                    id={id}
+                    rows={3}
+                    value={form[f.key] ?? ''}
+                    placeholder={f.placeholder}
+                    onChange={(e) =>
+                      setForm({ ...form, [f.key]: e.target.value })
+                    }
+                  />
+                ) : f.type === 'select' ? (
+                  <select
+                    id={id}
+                    value={form[f.key] ?? ''}
+                    onChange={(e) =>
+                      setForm({ ...form, [f.key]: e.target.value })
+                    }
+                  >
+                    {(f.options ?? []).map((o) => (
+                      <option key={o} value={o}>
+                        {o}
+                      </option>
+                    ))}
+                  </select>
+                ) : f.type === 'image' ? (
+                  <ImageField
+                    value={form[f.key] ?? ''}
+                    onChange={(v) => setForm({ ...form, [f.key]: v })}
+                  />
+                ) : (
+                  <input
+                    id={id}
+                    type={f.type === 'number' ? 'number' : 'text'}
+                    min={f.type === 'number' ? 0 : undefined}
+                    step={f.type === 'number' ? 'any' : undefined}
+                    value={form[f.key] ?? ''}
+                    placeholder={f.placeholder}
+                    onChange={(e) =>
+                      setForm({ ...form, [f.key]: e.target.value })
+                    }
+                  />
+                )}
+              </div>
+            );
+          })}
           <div className="btn-row">
-            <button className="btn btn-primary" type="submit">
-              Save
+            <button className="btn btn-primary" type="submit" disabled={busy}>
+              {busy ? 'Saving…' : 'Save'}
             </button>
             <button
               className="btn btn-ghost"
               type="button"
+              disabled={busy}
               onClick={() => setEditing(null)}
             >
               Cancel

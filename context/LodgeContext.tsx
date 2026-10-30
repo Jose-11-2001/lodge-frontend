@@ -156,7 +156,11 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     sessionStorage.setItem('lodge_user', JSON.stringify(userData));
     return userData;
   };
-
+export interface User {
+  id: number;
+  username: string;
+  role: Role;
+}
   const login = ({ username, password }: { username: string; password: string }) => {
     const found = db.users.find((u) => u.username === username && u.password === password);
     if (!found) throw new Error('Invalid credentials');

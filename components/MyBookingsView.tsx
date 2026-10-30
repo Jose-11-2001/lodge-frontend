@@ -7,8 +7,6 @@ import PayModal from '@/components/PayModal';
 import { useRequireLogin } from '@/lib/useRequireLogin';
 import type { BookingStatus } from '@/lib/models';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
-
 interface Row {
   id: number;
   status: BookingStatus;
@@ -24,22 +22,23 @@ interface Column<T> {
 interface Props<T extends Row> {
   title: string;
   subtitle: string;
+  icon?: string; 
   emptyText: string;
   newHref: string;
   newLabel: string;
   rows: T[];
   columns: Column<T>[];
   getAmount: (row: T) => number;
-  onPay: (id: number) => Promise<void> | void;
-  onCancel: (id: number) => Promise<void> | void;
+  /** e.g. bookingsApi.cancel or hallBookingsApi.cancel */
+  cancel: (id: number) => Promise<void>;
+  /** e.g. bookingsApi.initiatePayment or hallBookingsApi.initiatePayment */
+  pay: (id: number) => Promise<void>;
   noun: string;
-  /** e.g. "bookings" or "orders" — used to build the API path */
-  resource: string;
 }
 
 export default function MyBookingsView<T extends Row>({
   title, subtitle, emptyText, newHref, newLabel,
-  rows, columns, getAmount, onPay, onCancel, noun, resource,
+  rows, columns, getAmount, cancel, pay, noun,
 }: Props<T>) {
   const user = useRequireLogin();
   const [payingId, setPayingId] = useState<number | null>(null);
@@ -51,17 +50,11 @@ export default function MyBookingsView<T extends Row>({
   const paying = rows.find((r) => r.id === payingId) || null;
   const list = [...rows].reverse(); // newest first
 
-  const cancelOnServer = async (id: number) => {
+  const runCancel = async (id: number) => {
     setError(null);
     setBusyId(id);
     try {
-      const res = await fetch(`${API_BASE}/api/${resource}/${id}/cancel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`Cancel failed (${res.status})`);
-      await onCancel(id);
+      await cancel(id);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Cancel failed');
     } finally {
@@ -69,18 +62,12 @@ export default function MyBookingsView<T extends Row>({
     }
   };
 
-  const payOnServer = async (id: number, method: string) => {
+  const runPay = async (id: number) => {
     setError(null);
     setBusyId(id);
     try {
-      const res = await fetch(`${API_BASE}/api/${resource}/${id}/pay`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ method }),
-      });
-      if (!res.ok) throw new Error(`Payment failed (${res.status})`);
-      await onPay(id);
+      await pay(id);
+      // Backend redirects the browser on success, so we rarely get here.
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Payment failed');
     } finally {
@@ -143,7 +130,7 @@ export default function MyBookingsView<T extends Row>({
                           className="btn btn-danger"
                           style={{ padding: '6px 14px' }}
                           disabled={busyId === row.id}
-                          onClick={() => cancelOnServer(row.id)}
+                          onClick={() => runCancel(row.id)}
                         >
                           Cancel
                         </button>
@@ -162,8 +149,8 @@ export default function MyBookingsView<T extends Row>({
         onClose={() => setPayingId(null)}
         title={paying ? `Pay for ${noun} #${paying.id}` : ''}
         amount={paying ? getAmount(paying) : 0}
-        onPay={(method) => {
-          if (payingId !== null) void payOnServer(payingId, method);
+        onPay={() => {
+          if (payingId !== null) void runPay(payingId);
         }}
       />
     </div>
