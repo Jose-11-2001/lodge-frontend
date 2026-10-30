@@ -27,6 +27,7 @@ export type HallBooking = HallBookingResponse;
 export type Feedback = FeedbackDto;
 
 export interface User {
+  id: number;
   username: string;
   role: Role;
 }

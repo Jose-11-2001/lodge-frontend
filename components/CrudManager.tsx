@@ -24,6 +24,7 @@ export interface ColumnDef<T> {
 interface Props<T extends { id: number; name: string; primaryImage?: string }> {
   title: string;
   subtitle: string;
+  icon?: string;
   noun: string;
   emptyText: string;
   items: T[];
@@ -40,10 +41,10 @@ export default function CrudManager<
 >({
   title,
   subtitle,
+  icon,
   noun,
   emptyText,
   items,
-   icon?: string; 
   fields,
   columns,
   onCreate,
@@ -133,6 +134,7 @@ export default function CrudManager<
       <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
         <div>
           <h2 className="m-0 font-fraunces font-bold text-[34px] tracking-tight">
+            {icon ? `${icon} ` : ''}
             {title}
           </h2>
           <p className="m-0 mt-1 text-sm text-[var(--muted)]">{subtitle}</p>
@@ -155,8 +157,8 @@ export default function CrudManager<
             <thead>
               <tr>
                 <th>{noun}</th>
-                {columns.map((c) => (
-                  <th key={c.label}>{c.label}</th>
+                {columns.map((c, i) => (
+                  <th key={`${c.label}-${i}`}>{c.label}</th>
                 ))}
                 <th>Actions</th>
               </tr>
@@ -175,8 +177,8 @@ export default function CrudManager<
                       <b>{item.name}</b>
                     </div>
                   </td>
-                  {columns.map((c) => (
-                    <td key={c.label}>{c.render(item)}</td>
+                  {columns.map((c, i) => (
+                    <td key={`${c.label}-${i}`}>{c.render(item)}</td>
                   ))}
                   <td>
                     <div className="flex gap-2">
@@ -244,7 +246,14 @@ export default function CrudManager<
                 ) : f.type === 'image' ? (
                   <ImageField
                     value={form[f.key] ?? ''}
-                    onChange={(v) => setForm({ ...form, [f.key]: v })}
+                    onChange={(v) =>
+                      setForm({
+                        ...form,
+                        [f.key]:
+                          v instanceof File ? URL.createObjectURL(v) : '',
+                      })
+                    }
+                    onError={(msg) => notify(msg, true)}
                   />
                 ) : (
                   <input
