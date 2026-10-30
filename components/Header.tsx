@@ -70,9 +70,6 @@ export default function Header() {
             <em className="not-italic bg-[image:var(--grad-1)] bg-[length:200%_100%] bg-clip-text text-transparent animate-[gradientShift_6s_ease_infinite]">
               App
             </em>
-            <span className="hidden sm:inline-block font-sans text-[10px] tracking-[1px] font-bold text-[var(--accent)] border border-[rgba(110,168,255,0.4)] px-2 py-[3px] rounded-full ml-3 bg-[rgba(110,168,255,0.08)]">
-              PROTOTYPE
-            </span>
           </h1>
         </Link>
 
