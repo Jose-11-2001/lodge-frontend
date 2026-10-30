@@ -29,8 +29,12 @@ export default function AdminMealsPage() {
         { label: 'Price', render: (m) => money(m.price) },
         { label: 'Description', render: (m) => m.description },
       ]}
-      onCreate={(v) => createMeal(v as unknown as Omit<Meal, 'id'>)}
-      onUpdate={(meal, v) => updateMeal(meal.id, v as Partial<Meal>)}
+      onCreate={(v) => {           // FIXED
+        createMeal(v as unknown as Omit<Meal, 'id'>);
+      }}
+      onUpdate={(meal, v) => {     // FIXED
+        updateMeal(meal.id, v as Partial<Meal>);
+      }}
       onDelete={deleteMeal}
     />
   );

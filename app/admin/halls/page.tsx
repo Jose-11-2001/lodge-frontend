@@ -33,8 +33,12 @@ export default function AdminHallsPage() {
         { label: 'Per day', render: (h) => money(h.pricePerDay) },
         { label: 'Status', render: (h) => <span className={`badge ${h.available ? 'ok' : 'bad'}`}>{h.available ? 'Available' : 'Booked'}</span> },
       ]}
-      onCreate={(v) => createHall(v as unknown as Omit<Hall, 'id' | 'available'>)}
-      onUpdate={(hall, v) => updateHall(hall.id, v as Partial<Hall>)}
+      onCreate={(v) => {           // FIXED: block body, no return
+        createHall(v as unknown as Omit<Hall, 'id' | 'available'>);
+      }}
+      onUpdate={(hall, v) => {     // FIXED: block body, no return
+        updateHall(hall.id, v as Partial<Hall>);
+      }}
       onDelete={deleteHall}
     />
   );

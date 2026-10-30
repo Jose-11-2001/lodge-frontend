@@ -32,10 +32,11 @@ export default function AdminRoomsPage() {
         { label: 'Rooms free', render: (r) => `${r.availableRooms} / ${r.totalRooms}` },
         { label: 'Amenities', render: (r) => r.amenities.join(' · ') || '—' },
       ]}
-      onCreate={(v) => createRoom(v as unknown as Omit<Room, 'id' | 'availableRooms'>)}
-      onUpdate={(room, v) => {
+      onCreate={(v) => {           // FIXED
+        createRoom(v as unknown as Omit<Room, 'id' | 'availableRooms'>);
+      }}
+      onUpdate={(room, v) => {     // FIXED
         const total = Number(v.totalRooms);
-        // keep the "rooms free" count correct when the total changes
         const free = Math.max(0, room.availableRooms + (total - room.totalRooms));
         updateRoom(room.id, { ...(v as Partial<Room>), availableRooms: free });
       }}

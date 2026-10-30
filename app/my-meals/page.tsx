@@ -4,6 +4,7 @@ import React from 'react';
 import { useLodge } from '@/context/LodgeContext';
 import MyBookingsView from '@/components/MyBookingsView';
 import { money, dateTime } from '@/lib/format';
+import { PaymentMethod } from '@/types';
 
 export default function MyMealsPage() {
   const { user, mealOrders, payMealOrder, cancelMealOrder, showToast } =
@@ -28,7 +29,7 @@ export default function MyMealsPage() {
         { label: 'Serve at', render: (o) => dateTime(o.serveAt) },
         { label: 'Total', render: (o) => money(o.totalPrice) },
       ]}
-      onPay={(id: number, method: string) => {
+      onPay={(id: number, method: PaymentMethod) => {
         try {
           payMealOrder(id, method);
           showToast('Payment successful');

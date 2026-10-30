@@ -4,6 +4,7 @@ import React from 'react';
 import { useLodge } from '@/context/LodgeContext';
 import MyBookingsView from '@/components/MyBookingsView';
 import { money, dateOnly } from '@/lib/format';
+import { PaymentMethod } from '@/types';
 
 export default function MyBookingsPage() {
   const { user, bookings, payBooking, cancelBooking, showToast } = useLodge();
@@ -30,7 +31,7 @@ export default function MyBookingsPage() {
         },
         { label: 'Total', render: (b) => money(b.totalAmount) },
       ]}
-      onPay={(id: number, method: string) => {
+      onPay={(id: number, method: PaymentMethod) => {
         try {
           payBooking(id, method);
           showToast('Payment successful');
