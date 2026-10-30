@@ -3,24 +3,33 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useLodge } from '@/context/LodgeContext';
+import { authApi, auth } from '@/lib/api';
 
 export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
-  const { login, register, showToast } = useLodge();
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const isLogin = mode === 'login';
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+    setLoading(true);
     try {
-      if (!isLogin && password.length < 6) throw new Error('Password must be at least 6 characters');
-      const u = isLogin ? login({ username, password }) : register({ username, password });
-      showToast(isLogin ? `Welcome back, ${u.username}` : 'Account created');
+      if (!isLogin && password.length < 6)
+        throw new Error('Password must be at least 6 characters');
+
+      const u = isLogin
+        ? await authApi.login(username, password)
+        : await authApi.register(username, password);
+
       router.push(u.role === 'ADMIN' ? '/admin/dashboard' : '/');
     } catch (err) {
-      showToast((err as Error).message, true);
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -35,24 +44,49 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       <form onSubmit={submit}>
         <div className="field">
           <label>Username</label>
-          <input value={username} onChange={(e) => setUsername(e.target.value)} required />
+          <input
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            autoComplete="username"
+          />
         </div>
         <div className="field">
           <label>Password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete={isLogin ? 'current-password' : 'new-password'}
+          />
         </div>
-        <button className="btn btn-primary w-full" type="submit">
-          {isLogin ? 'Login' : 'Create account'}
+        {error && (
+          <p className="text-sm text-[#ff6b7e] m-0 mb-2" role="alert">
+            {error}
+          </p>
+        )}
+        <button className="btn btn-primary w-full" type="submit" disabled={loading}>
+          {loading
+            ? 'Please wait…'
+            : isLogin
+            ? 'Login'
+            : 'Create account'}
         </button>
       </form>
       <p className="mt-4 mb-0 text-sm text-[var(--muted)]">
         {isLogin ? 'New here? ' : 'Already registered? '}
-        <Link href={isLogin ? '/register' : '/login'} className="text-[var(--accent)] font-semibold no-underline">
+        <Link
+          href={isLogin ? '/register' : '/login'}
+          className="text-[var(--accent)] font-semibold no-underline"
+        >
           {isLogin ? 'Create an account' : 'Login'}
         </Link>
       </p>
       {isLogin && (
-        <p className="mt-3 mb-0 text-xs text-[var(--muted)]">Test accounts: alice / pass, admin / admin</p>
+        <p className="mt-3 mb-0 text-xs text-[var(--muted)]">
+          Admin account is seeded on first run: admin / admin123
+        </p>
       )}
     </div>
   );
