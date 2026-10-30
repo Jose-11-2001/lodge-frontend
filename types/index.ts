@@ -1,3 +1,6 @@
+
+export type * from '../lib/api';
+export type * from '../lib/models';
 export type Role = 'ADMIN' | 'CUSTOMER';
 
 export interface User {
