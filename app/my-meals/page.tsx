@@ -6,8 +6,11 @@ import MyBookingsView from '@/components/MyBookingsView';
 import { money, dateTime } from '@/lib/format';
 
 export default function MyMealsPage() {
-  const { user, mealOrders, payMealOrder, cancelMealOrder, showToast } = useLodge();
-  const rows = user ? mealOrders.filter((o) => o.customerUsername === user.username) : [];
+  const { user, mealOrders, payMealOrder, cancelMealOrder, showToast } =
+    useLodge();
+  const rows = user
+    ? mealOrders.filter((o) => o.customerUsername === user.username)
+    : [];
 
   return (
     <MyBookingsView
@@ -25,13 +28,21 @@ export default function MyMealsPage() {
         { label: 'Serve at', render: (o) => dateTime(o.serveAt) },
         { label: 'Total', render: (o) => money(o.totalPrice) },
       ]}
-      onPay={(id, method) => {
-        try { payMealOrder(id, method); showToast('Payment successful'); }
-        catch (e) { showToast((e as Error).message, true); }
+      onPay={(id: number, method: string) => {
+        try {
+          payMealOrder(id, method);
+          showToast('Payment successful');
+        } catch (e) {
+          showToast((e as Error).message, true);
+        }
       }}
-      onCancel={(id) => {
-        try { cancelMealOrder(id); showToast('Order cancelled'); }
-        catch (e) { showToast((e as Error).message, true); }
+      onCancel={(id: number) => {
+        try {
+          cancelMealOrder(id);
+          showToast('Order cancelled');
+        } catch (e) {
+          showToast((e as Error).message, true);
+        }
       }}
     />
   );
