@@ -17,7 +17,7 @@ export default function AdminHallsPage() {
       noun="Hall"
       emptyText="No halls yet."
       items={halls}
-      notify={showToast}                                  {/* FIXED */}
+      notify={showToast}
       fields={[
         { key: 'name', label: 'Name', type: 'text' },
         { key: 'building', label: 'Building', type: 'text' },

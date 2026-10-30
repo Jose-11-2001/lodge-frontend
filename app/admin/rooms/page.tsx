@@ -17,7 +17,7 @@ export default function AdminRoomsPage() {
       noun="Room"
       emptyText="No rooms yet."
       items={rooms}
-      notify={showToast}                                  {/* FIXED */}
+      notify={showToast}
       fields={[
         { key: 'name', label: 'Name', type: 'text' },
         { key: 'building', label: 'Building', type: 'text' },

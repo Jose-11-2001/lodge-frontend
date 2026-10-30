@@ -203,22 +203,28 @@ export interface Page<T> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Token management
+// Token management (SSR-safe)
 // ─────────────────────────────────────────────────────────────
+
+const isBrowser = typeof window !== 'undefined';
 
 export const auth = {
   save(a: AuthResponse) {
+    if (!isBrowser) return;
     localStorage.setItem(TOKEN_KEY, a.token);
     localStorage.setItem(ROLE_KEY, a.role);
     localStorage.setItem(USER_KEY, a.username);
   },
   token(): string | null {
+    if (!isBrowser) return null;
     return localStorage.getItem(TOKEN_KEY);
   },
   role(): Role | null {
+    if (!isBrowser) return null;
     return localStorage.getItem(ROLE_KEY) as Role | null;
   },
   username(): string | null {
+    if (!isBrowser) return null;
     return localStorage.getItem(USER_KEY);
   },
   isAdmin(): boolean {
@@ -228,6 +234,7 @@ export const auth = {
     return !!this.token();
   },
   logout() {
+    if (!isBrowser) return;
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(ROLE_KEY);
     localStorage.removeItem(USER_KEY);

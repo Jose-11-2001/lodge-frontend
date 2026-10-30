@@ -3,10 +3,16 @@
 import React from 'react';
 import Link from 'next/link';
 import { BookingStatus } from '@/types';
+import { PaymentMethod } from '@/types';
 import { money } from '@/lib/format';
 import StatusBadge from '@/components/StatusBadge';
 
-const PAYMENT_METHODS = ['CARD', 'MOBILE_MONEY', 'BANK_TRANSFER', 'CASH'];
+const PAYMENT_METHODS: PaymentMethod[] = [
+  'CARD',
+  'MOBILE_MONEY',
+  'BANK_TRANSFER',
+  'CASH',
+];
 
 interface Row {
   id: number;
@@ -26,7 +32,7 @@ interface Props<T extends Row> {
   rows: T[];
   getAmount: (row: T) => number;
   columns: { label: string; render: (row: T) => React.ReactNode }[];
- onPay: (id: number, method: import('@/types').PaymentMethod) => void;
+  onPay: (id: number, method: PaymentMethod) => void;
   onCancel: (id: number) => void;
 }
 
@@ -45,7 +51,7 @@ export default function MyBookingsView<T extends Row>({
   onCancel,
 }: Props<T>) {
   const [paying, setPaying] = React.useState<T | null>(null);
-  const [method, setMethod] = React.useState<string>('CARD');
+  const [method, setMethod] = React.useState<PaymentMethod>('CARD');
 
   return (
     <div>
@@ -156,7 +162,7 @@ export default function MyBookingsView<T extends Row>({
               <select
                 id="pay-method"
                 value={method}
-                onChange={(e) => setMethod(e.target.value)}
+                onChange={(e) => setMethod(e.target.value as PaymentMethod)}
               >
                 {PAYMENT_METHODS.map((m) => (
                   <option key={m} value={m}>

@@ -17,7 +17,7 @@ export default function AdminMealsPage() {
       noun="Meal"
       emptyText="No meals yet."
       items={meals}
-      notify={showToast}                                  {/* FIXED */}
+      notify={showToast}
       fields={[
         { key: 'name', label: 'Name', type: 'text' },
         { key: 'mealType', label: 'Meal type', type: 'select', options: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] },
