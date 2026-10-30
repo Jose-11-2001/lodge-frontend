@@ -5,13 +5,15 @@ import Link from 'next/link';
 import StatusBadge from '@/components/StatusBadge';
 import PayModal from '@/components/PayModal';
 import { useRequireLogin } from '@/lib/useRequireLogin';
-import { BookingStatus } from '@/types';
+import type { BookingStatus } from '@/lib/models';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
 
 interface Row {
   id: number;
   status: BookingStatus;
   paid: boolean;
-  paymentMethod: string | null;
+  paymentMethod?: string | null;
 }
 
 interface Column<T> {
@@ -22,29 +24,70 @@ interface Column<T> {
 interface Props<T extends Row> {
   title: string;
   subtitle: string;
-  icon: string;
   emptyText: string;
   newHref: string;
   newLabel: string;
   rows: T[];
   columns: Column<T>[];
   getAmount: (row: T) => number;
-  onPay: (id: number, method: string) => void;
-  onCancel: (id: number) => void;
-  noun: string; // e.g. "booking" or "order"
+  onPay: (id: number) => Promise<void> | void;
+  onCancel: (id: number) => Promise<void> | void;
+  noun: string;
+  /** e.g. "bookings" or "orders" — used to build the API path */
+  resource: string;
 }
 
 export default function MyBookingsView<T extends Row>({
-  title, subtitle, icon, emptyText, newHref, newLabel,
-  rows, columns, getAmount, onPay, onCancel, noun,
+  title, subtitle, emptyText, newHref, newLabel,
+  rows, columns, getAmount, onPay, onCancel, noun, resource,
 }: Props<T>) {
   const user = useRequireLogin();
   const [payingId, setPayingId] = useState<number | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (!user) return null;
 
   const paying = rows.find((r) => r.id === payingId) || null;
   const list = [...rows].reverse(); // newest first
+
+  const cancelOnServer = async (id: number) => {
+    setError(null);
+    setBusyId(id);
+    try {
+      const res = await fetch(`${API_BASE}/api/${resource}/${id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error(`Cancel failed (${res.status})`);
+      await onCancel(id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Cancel failed');
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const payOnServer = async (id: number, method: string) => {
+    setError(null);
+    setBusyId(id);
+    try {
+      const res = await fetch(`${API_BASE}/api/${resource}/${id}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ method }),
+      });
+      if (!res.ok) throw new Error(`Payment failed (${res.status})`);
+      await onPay(id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Payment failed');
+    } finally {
+      setBusyId(null);
+      setPayingId(null);
+    }
+  };
 
   return (
     <div>
@@ -56,8 +99,14 @@ export default function MyBookingsView<T extends Row>({
         <Link href={newHref} className="btn btn-primary no-underline">{newLabel}</Link>
       </div>
 
+      {error && (
+        <div className="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {list.length === 0 ? (
-        <div className="empty"><div className="ico">{icon}</div>{emptyText}</div>
+        <div className="empty">{emptyText}</div>
       ) : (
         <div className="table-wrap">
           <table>
@@ -76,14 +125,28 @@ export default function MyBookingsView<T extends Row>({
                   <td>#{row.id}</td>
                   {columns.map((c) => <td key={c.label}>{c.render(row)}</td>)}
                   <td><StatusBadge status={row.status} /></td>
-                  <td>{row.paid ? `✅ ${row.paymentMethod || ''}` : '—'}</td>
+                  <td>{row.paid ? (row.paymentMethod || 'Paid') : '—'}</td>
                   <td>
                     <div className="flex gap-2 flex-wrap">
                       {!row.paid && row.status !== 'CANCELLED' && (
-                        <button className="btn btn-primary" style={{ padding: '6px 14px' }} onClick={() => setPayingId(row.id)}>Pay</button>
+                        <button
+                          className="btn btn-primary"
+                          style={{ padding: '6px 14px' }}
+                          disabled={busyId === row.id}
+                          onClick={() => setPayingId(row.id)}
+                        >
+                          Pay
+                        </button>
                       )}
                       {row.status !== 'CANCELLED' && row.status !== 'COMPLETED' && (
-                        <button className="btn btn-danger" style={{ padding: '6px 14px' }} onClick={() => onCancel(row.id)}>Cancel</button>
+                        <button
+                          className="btn btn-danger"
+                          style={{ padding: '6px 14px' }}
+                          disabled={busyId === row.id}
+                          onClick={() => cancelOnServer(row.id)}
+                        >
+                          Cancel
+                        </button>
                       )}
                     </div>
                   </td>
@@ -100,8 +163,7 @@ export default function MyBookingsView<T extends Row>({
         title={paying ? `Pay for ${noun} #${paying.id}` : ''}
         amount={paying ? getAmount(paying) : 0}
         onPay={(method) => {
-          if (payingId !== null) onPay(payingId, method);
-          setPayingId(null);
+          if (payingId !== null) void payOnServer(payingId, method);
         }}
       />
     </div>
