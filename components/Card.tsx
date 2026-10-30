@@ -3,7 +3,7 @@
 import React from 'react';
 import { Room, Meal, Hall } from '@/types';
 
-type CardItem = 
+type CardItem =
   | ({ itemType: 'rooms' } & Room)
   | ({ itemType: 'meals' } & Meal)
   | ({ itemType: 'halls' } & Hall);
@@ -13,9 +13,11 @@ interface CardProps {
   onAction?: () => void;
   actionLabel?: string;
   disabled?: boolean;
+  rating?: { avg: number; count: number };
+  onRatingClick?: () => void;
 }
 
-export default function Card({ item, onAction, actionLabel, disabled }: CardProps) {
+export default function Card({ item, onAction, actionLabel, disabled, rating, onRatingClick }: CardProps) {
   const img = item.primaryImage || 'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=900&q=80';
   const tag = item.itemType === 'rooms' ? 'ROOM' : item.itemType === 'meals' ? (item.mealType || 'MEAL') : 'HALL';
 
@@ -24,7 +26,7 @@ export default function Card({ item, onAction, actionLabel, disabled }: CardProp
   return (
     <div className="bg-[var(--card)] backdrop-blur-md border border-[var(--line)] rounded-[var(--radius)] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1.5 hover:border-[var(--line-2)] hover:shadow-[var(--shadow-md)] shadow-[var(--shadow-sm)]">
       {/* Thumbnail */}
-      <div 
+      <div
         className="h-[180px] relative overflow-hidden bg-cover bg-center transition-transform duration-500 hover:scale-105"
         style={{ backgroundImage: `url('${img}')` }}
       >
@@ -34,14 +36,14 @@ export default function Card({ item, onAction, actionLabel, disabled }: CardProp
 
         {item.itemType === 'rooms' && (
           <div className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(0,0,0,0.6)] text-white text-xs font-semibold backdrop-blur-md">
-            <span className={`w-1.75 h-1.75 rounded-full ${item.availableRooms > 0 ? 'bg-[#22d3a8] shadow-[0_0_8px_#22d3a8] animate-pulse' : 'bg-[#ff6b7e]'}`} />
+            <span className={`w-[7px] h-[7px] rounded-full ${item.availableRooms > 0 ? 'bg-[#22d3a8] shadow-[0_0_8px_#22d3a8] animate-pulse' : 'bg-[#ff6b7e]'}`} />
             <span>{item.availableRooms > 0 ? `${item.availableRooms} left` : 'Sold out'}</span>
           </div>
         )}
 
         {item.itemType === 'halls' && (
           <div className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(0,0,0,0.6)] text-white text-xs font-semibold backdrop-blur-md">
-            <span className={`w-1.75 h-1.75 rounded-full ${item.available ? 'bg-[#22d3a8] shadow-[0_0_8px_#22d3a8] animate-pulse' : 'bg-[#ff6b7e]'}`} />
+            <span className={`w-[7px] h-[7px] rounded-full ${item.available ? 'bg-[#22d3a8] shadow-[0_0_8px_#22d3a8] animate-pulse' : 'bg-[#ff6b7e]'}`} />
             <span>{item.available ? 'Available' : 'Booked'}</span>
           </div>
         )}
@@ -53,6 +55,24 @@ export default function Card({ item, onAction, actionLabel, disabled }: CardProp
         <p className="text-[var(--muted)] text-[13.5px] leading-relaxed m-0 line-clamp-2">
           {item.description || '—'}
         </p>
+
+        {/* Guest rating (rooms only) */}
+        {rating && (
+          <button
+            type="button"
+            onClick={onRatingClick}
+            className="self-start bg-transparent border-none p-0 text-[13px] cursor-pointer text-[var(--muted)] hover:text-[var(--text)]"
+          >
+            {rating.count > 0 ? (
+              <>
+                <span className="stars" style={{ fontSize: 13 }}>★</span>{' '}
+                <b className="text-[var(--text)]">{rating.avg.toFixed(1)}</b> · {rating.count} review{rating.count > 1 ? 's' : ''}
+              </>
+            ) : (
+              'No reviews yet'
+            )}
+          </button>
+        )}
 
         {/* Meta tags */}
         <div className="flex gap-1.5 flex-wrap text-xs text-[var(--muted)]">

@@ -28,11 +28,13 @@ export default function Header() {
       ];
     }
     if (user.role === 'ADMIN') {
-      return [
+       return [
         { label: 'Dashboard', href: '/admin/dashboard' },
         { label: 'Rooms', href: '/admin/rooms' },
         { label: 'Meals', href: '/admin/meals' },
         { label: 'Halls', href: '/admin/halls' },
+        { label: 'Bookings', href: '/admin/bookings' },
+        { label: 'Feedback', href: '/admin/feedback' },
       ];
     }
     return [

@@ -12,7 +12,7 @@ interface FilterBarProps {
   onSearchChange?: (val: string) => void;
   chips?: ChipOption[];
   activeChip?: string | boolean;
-  onChipChange?: (val: any) => void;
+  onChipChange?: (val: string | boolean) => void;
 }
 
 export default function FilterBar({
@@ -23,24 +23,24 @@ export default function FilterBar({
   onChipChange,
 }: FilterBarProps) {
   return (
-    <div className="flex gap-2.5 flex-wrap p-3.5 bg-[var(--panel)] border border-[var(--line)] rounded-2xl mb-5.5 backdrop-blur-md">
+    <div className="flex gap-2.5 flex-wrap p-3.5 bg-[var(--panel)] border border-[var(--line)] rounded-2xl mb-[22px] backdrop-blur-md">
       {onSearchChange !== undefined && (
         <input
           type="text"
           placeholder="🔍 Search by name..."
           value={searchValue || ''}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="flex-1 min-w-[140px] px-3.5 py-2.5 rounded-xl border border-[var(--line-2)] bg-[rgba(10,15,30,0.55)] text-[var(--text)] text-sm outline-none focus:border-[var(--accent)]"
+          className="flex-1 min-w-[140px] px-3.5 py-2.5 rounded-xl border border-[var(--line-2)] bg-[var(--card)] text-[var(--text)] text-sm outline-none focus:border-[var(--accent)]"
         />
       )}
 
       {chips && onChipChange && (
         <div className="flex gap-1.5 flex-wrap">
-          {chips.map((chip, idx) => {
+          {chips.map((chip) => {
             const isActive = activeChip === chip.value;
             return (
               <button
-                key={idx}
+                key={String(chip.value)}
                 type="button"
                 onClick={() => onChipChange(chip.value)}
                 className={`px-3.5 py-2 rounded-full cursor-pointer border text-xs font-semibold transition-all ${

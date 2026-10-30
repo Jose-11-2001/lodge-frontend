@@ -1,0 +1,37 @@
+'use client';
+
+import React from 'react';
+import { useLodge } from '@/context/LodgeContext';
+import CrudManager from '@/components/CrudManager';
+import { money } from '@/lib/format';
+import { Meal } from '@/types';
+
+export default function AdminMealsPage() {
+  const { meals, createMeal, updateMeal, deleteMeal } = useLodge();
+
+  return (
+    <CrudManager<Meal>
+      title="Manage Meals"
+      subtitle="Add dishes, set prices and upload photos."
+      icon="🍽️"
+      noun="Meal"
+      emptyText="No meals yet."
+      items={meals}
+      fields={[
+        { key: 'name', label: 'Name', type: 'text' },
+        { key: 'mealType', label: 'Meal type', type: 'select', options: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] },
+        { key: 'description', label: 'Description', type: 'textarea' },
+        { key: 'price', label: 'Price (K)', type: 'number' },
+        { key: 'primaryImage', label: 'Photo', type: 'image' },
+      ]}
+      columns={[
+        { label: 'Type', render: (m) => <span className="badge">{m.mealType}</span> },
+        { label: 'Price', render: (m) => money(m.price) },
+        { label: 'Description', render: (m) => m.description },
+      ]}
+      onCreate={(v) => createMeal(v as unknown as Omit<Meal, 'id'>)}
+      onUpdate={(meal, v) => updateMeal(meal.id, v as Partial<Meal>)}
+      onDelete={deleteMeal}
+    />
+  );
+}
