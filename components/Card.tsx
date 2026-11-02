@@ -11,8 +11,7 @@ type CardItem =
 interface CardProps {
   item: CardItem;
   onAction?: () => void;
-  actionLabel?: string;
-  disabled?: boolean;
+  actionLabel?: string;  disabled?: boolean;
   rating?: { avg: number; count: number };
   onRatingClick?: () => void;
 }

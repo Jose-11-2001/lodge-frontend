@@ -35,6 +35,7 @@ function RoomBookingForm({ room, onClose }: { room: Room; onClose: () => void })
 
   return (
     <form onSubmit={submit}>
+ 
       <div className="field"><label>Check-in</label>
         <input type="date" min={dayStr(0)} value={checkIn} onChange={(e) => setCheckIn(e.target.value)} /></div>
       <div className="field"><label>Check-out</label>

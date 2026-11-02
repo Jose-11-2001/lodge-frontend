@@ -5,7 +5,7 @@ import {
   User, Room, Meal, Hall, Booking, HallBooking, MealOrder, Feedback, BookingStatus,
 } from '@/types';
 
-const DB_KEY = 'lodge_db_v3';
+const DB_KEY = 'lodge_db_v4';
 
 interface StoredUser extends User {
   password: string;
@@ -34,32 +34,16 @@ interface LodgeDatabase {
 const seedData = (): LodgeDatabase => ({
   users: [
     { id: 1, username: 'admin', password: 'admin', role: 'ADMIN' as const },
-    { id: 2, username: 'alice', password: 'pass', role: 'CUSTOMER' as const },
-    { id: 3, username: 'bob', password: 'pass', role: 'CUSTOMER' as const },
   ],
-  rooms: [
-    { id: 1, name: 'Deluxe King', building: 'Block A', description: 'Spacious room with king bed, city view and premium amenities', pricePerNight: 85, totalRooms: 5, availableRooms: 5, amenities: ['WiFi', 'AC', 'TV'], primaryImage: 'https://images.unsplash.com/photo-1611892440504-42a792e24d32?w=900&q=80' },
-    { id: 2, name: 'Standard Twin', building: 'Block B', description: 'Two single beds, budget friendly and comfortable', pricePerNight: 55, totalRooms: 8, availableRooms: 8, amenities: ['WiFi', 'Fan'], primaryImage: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=900&q=80' },
-    { id: 3, name: 'Executive Suite', building: 'Block A', description: 'Luxury suite with lounge, king bed, and minibar', pricePerNight: 140, totalRooms: 2, availableRooms: 2, amenities: ['WiFi', 'AC', 'TV', 'Minibar'], primaryImage: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=900&q=80' },
-    { id: 4, name: 'Garden View Room', building: 'Block B', description: 'Overlooks the lodge garden, perfect for couples', pricePerNight: 70, totalRooms: 4, availableRooms: 4, amenities: ['WiFi', 'AC'], primaryImage: 'https://images.unsplash.com/photo-1568495248636-6432b97bd949?w=900&q=80' },
-  ],
-  meals: [
-    { id: 1, name: 'Full English Breakfast', mealType: 'BREAKFAST' as const, description: 'Eggs, bacon, toast, coffee', price: 12, primaryImage: 'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=900&q=80' },
-    { id: 2, name: 'Grilled Chicken Plate', mealType: 'LUNCH' as const, description: 'Chicken, rice, salad', price: 15, primaryImage: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=900&q=80' },
-    { id: 3, name: 'Beef Stew', mealType: 'DINNER' as const, description: 'Slow cooked beef with veg', price: 18, primaryImage: 'https://images.unsplash.com/photo-1547592180-85f173990554?w=900&q=80' },
-    { id: 4, name: 'Fruit & Yogurt Bowl', mealType: 'BREAKFAST' as const, description: 'Seasonal fruit, honey yogurt', price: 8, primaryImage: 'https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=900&q=80' },
-  ],
-  halls: [
-    { id: 1, name: 'Grand Conference Hall', building: 'Block C', description: 'Full AV setup, 200 seats, ideal for conferences', capacity: 200, pricePerHour: 50, pricePerDay: 350, available: true, primaryImage: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=900&q=80' },
-    { id: 2, name: 'Boardroom', building: 'Block A', description: '12-seat meeting room with video conferencing', capacity: 12, pricePerHour: 20, pricePerDay: 120, available: true, primaryImage: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=900&q=80' },
-  ],
+  rooms: [] as Room[],
+  meals: [] as Meal[],
+  halls: [] as Hall[],
   bookings: [] as Booking[],
   hallBookings: [] as HallBooking[],
   mealOrders: [] as MealOrder[],
   feedback: [] as Feedback[],
-  seq: { rooms: 5, meals: 5, halls: 3, bookings: 1, hallBookings: 1, mealOrders: 1, feedback: 1 },
+  seq: { rooms: 1, meals: 1, halls: 1, bookings: 1, hallBookings: 1, mealOrders: 1, feedback: 1 },
 });
-
 interface LodgeContextType {
   theme: string;
   toggleTheme: () => void;
