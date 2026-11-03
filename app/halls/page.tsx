@@ -22,7 +22,10 @@ function HallBookingForm({ hall, onClose }: { hall: Hall; onClose: () => void })
   const [mode, setMode] = useState<'HOURLY' | 'DAILY'>('HOURLY');
 
   const hours = Math.max(1, (new Date(endTime).getTime() - new Date(startTime).getTime()) / 3600000);
-  const total = mode === 'DAILY' ? hall.pricePerDay : hall.pricePerHour * hours;
+  // FIXED: pricePerDay is optional, coalesce to 0
+  const total = mode === 'DAILY'
+    ? (hall.pricePerDay ?? 0)
+    : hall.pricePerHour * hours;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -2,7 +2,16 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import {
-  User, Room, Meal, Hall, Booking, HallBooking, MealOrder, Feedback, BookingStatus,
+  User,
+  Room,
+  Meal,
+  Hall,
+  Booking,
+  HallBooking,
+  MealOrder,
+  Feedback,
+  BookingStatus,
+  PaymentMethod,
 } from '@/types';
 
 const DB_KEY = 'lodge_db_v4';
@@ -59,13 +68,13 @@ interface LodgeContextType {
   mealOrders: MealOrder[];
   feedbackList: Feedback[];
   createBooking: (data: { roomId: number; checkIn: string; checkOut: string; roomCount?: number }) => Booking;
-  payBooking: (id: number, method: string) => Booking;
+  payBooking: (id: number, method: PaymentMethod) => Booking;
   cancelBooking: (id: number) => void;
   createHallBooking: (data: { hallId: number; startTime: string; endTime: string; purpose: string; attendees: number; billingMode?: 'HOURLY' | 'DAILY' }) => HallBooking;
-  payHallBooking: (id: number, method: string) => HallBooking;
+  payHallBooking: (id: number, method: PaymentMethod) => HallBooking;
   cancelHallBooking: (id: number) => void;
   createMealOrder: (data: { mealId: number; quantity: number; serveAt: string }) => MealOrder;
-  payMealOrder: (id: number, method: string) => MealOrder;
+  payMealOrder: (id: number, method: PaymentMethod) => MealOrder;
   cancelMealOrder: (id: number) => void;
   createFeedback: (data: { bookingId?: number | null; rating: number; comment: string }) => Feedback;
   createRoom: (data: Omit<Room, 'id' | 'availableRooms'>) => Room;
@@ -106,7 +115,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (savedDb) {
       const seed = seedData();
       const parsed = JSON.parse(savedDb);
-      // merge with the seed so missing fields never crash the app
       setDb({ ...seed, ...parsed, seq: { ...seed.seq, ...parsed.seq } });
     } else {
       const initial = seedData();
@@ -197,8 +205,8 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return newBooking;
   };
 
-  const payBooking = (id: number, method: string) => {
-    const updated = db.bookings.map((b) =>
+  const payBooking = (id: number, method: PaymentMethod): Booking => {
+    const updated: Booking[] = db.bookings.map((b) =>
       b.id === id
         ? { ...b, paid: true, status: 'CONFIRMED' as BookingStatus, paymentMethod: method, paymentReference: 'PAY-' + Date.now() }
         : b
@@ -207,7 +215,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return updated.find((b) => b.id === id)!;
   };
 
-  // one place that changes a room booking's status and gives rooms back once
   const setBookingStatus = (id: number, status: BookingStatus) => {
     const b = db.bookings.find((x) => x.id === id);
     if (!b) throw new Error('Booking not found');
@@ -232,7 +239,10 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!hall.available) throw new Error('Hall not available');
 
     const hours = Math.max(1, (new Date(endTime).getTime() - new Date(startTime).getTime()) / 3600000);
-    const total = billingMode === 'DAILY' ? hall.pricePerDay : hall.pricePerHour * hours;
+    const total =
+      billingMode === 'DAILY'
+        ? hall.pricePerDay ?? hall.pricePerHour * 24
+        : hall.pricePerHour * hours;
 
     const newHallBooking: HallBooking = {
       id: db.seq.hallBookings,
@@ -260,8 +270,8 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return newHallBooking;
   };
 
-  const payHallBooking = (id: number, method: string) => {
-    const updated = db.hallBookings.map((hb) =>
+  const payHallBooking = (id: number, method: PaymentMethod): HallBooking => {
+    const updated: HallBooking[] = db.hallBookings.map((hb) =>
       hb.id === id
         ? { ...hb, paid: true, status: 'CONFIRMED' as BookingStatus, paymentMethod: method, paymentReference: 'PAY-' + Date.now() }
         : hb
@@ -270,7 +280,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return updated.find((hb) => hb.id === id)!;
   };
 
-  // frees the hall once, only when a booking becomes cancelled
   const setHallBookingStatus = (id: number, status: BookingStatus) => {
     const hb = db.hallBookings.find((x) => x.id === id);
     if (!hb) throw new Error('Booking not found');
@@ -314,8 +323,8 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return order;
   };
 
-  const payMealOrder = (id: number, method: string) => {
-    const updated = db.mealOrders.map((o) =>
+  const payMealOrder = (id: number, method: PaymentMethod): MealOrder => {
+    const updated: MealOrder[] = db.mealOrders.map((o) =>
       o.id === id
         ? { ...o, paid: true, status: 'CONFIRMED' as BookingStatus, paymentMethod: method, paymentReference: 'PAY-' + Date.now() }
         : o

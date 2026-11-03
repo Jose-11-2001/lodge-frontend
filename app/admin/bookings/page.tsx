@@ -6,7 +6,7 @@ import { useLodge } from '@/context/LodgeContext';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import StatusBadge from '@/components/StatusBadge';
 import { money, dateOnly, dateTime } from '@/lib/format';
-import { BookingStatus } from '@/types';
+import { BookingStatus, PaymentMethod } from '@/types';
 
 type Tab = 'rooms' | 'halls' | 'meals';
 
@@ -18,7 +18,7 @@ interface Row {
   total: number;
   status: BookingStatus;
   paid: boolean;
-  method: string | null;
+  method: PaymentMethod | null;
 }
 
 export default function AdminBookingsPage() {
@@ -36,30 +36,42 @@ export default function AdminBookingsPage() {
       icon: '🛏️',
       update: updateBookingStatus,
       rows: bookings.map((b) => ({
-        id: b.id, customer: b.customerUsername,
+        id: b.id,
+        customer: b.customerUsername,
         item: `${b.roomName} × ${b.roomCount}`,
         when: `${dateOnly(b.checkIn)} → ${dateOnly(b.checkOut)}`,
-        total: b.totalAmount, status: b.status, paid: b.paid, method: b.paymentMethod,
+        total: b.totalAmount,
+        status: b.status,
+        paid: b.paid,
+        method: b.paymentMethod ?? null,
       })),
     },
     halls: {
       icon: '🏛️',
       update: updateHallBookingStatus,
       rows: hallBookings.map((h) => ({
-        id: h.id, customer: h.customerUsername,
+        id: h.id,
+        customer: h.customerUsername,
         item: `${h.hallName} (${h.purpose}, ${h.attendees} people)`,
         when: `${dateTime(h.startTime)} → ${dateTime(h.endTime)}`,
-        total: h.totalPrice, status: h.status, paid: h.paid, method: h.paymentMethod,
+        total: h.totalPrice,
+        status: h.status,
+        paid: h.paid,
+        method: h.paymentMethod ?? null,
       })),
     },
     meals: {
       icon: '🍽️',
       update: updateMealOrderStatus,
       rows: mealOrders.map((o) => ({
-        id: o.id, customer: o.customerUsername,
+        id: o.id,
+        customer: o.customerUsername,
         item: `${o.mealName} × ${o.quantity}`,
         when: dateTime(o.serveAt),
-        total: o.totalPrice, status: o.status, paid: o.paid, method: o.paymentMethod,
+        total: o.totalPrice,
+        status: o.status,
+        paid: o.paid,
+        method: o.paymentMethod ?? null,
       })),
     },
   };

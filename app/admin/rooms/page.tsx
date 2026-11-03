@@ -7,7 +7,7 @@ import { money } from '@/lib/format';
 import { Room } from '@/types';
 
 export default function AdminRoomsPage() {
-  const { rooms, createRoom, updateRoom, deleteRoom } = useLodge();
+  const { rooms, createRoom, updateRoom, deleteRoom, showToast } = useLodge();
 
   return (
     <CrudManager<Room>
@@ -17,6 +17,7 @@ export default function AdminRoomsPage() {
       noun="Room"
       emptyText="No rooms yet."
       items={rooms}
+      notify={showToast}
       fields={[
         { key: 'name', label: 'Name', type: 'text' },
         { key: 'building', label: 'Building', type: 'text' },
@@ -32,10 +33,11 @@ export default function AdminRoomsPage() {
         { label: 'Rooms free', render: (r) => `${r.availableRooms} / ${r.totalRooms}` },
         { label: 'Amenities', render: (r) => r.amenities.join(' · ') || '—' },
       ]}
-      onCreate={(v) => createRoom(v as unknown as Omit<Room, 'id' | 'availableRooms'>)}
+      onCreate={(v) => {
+        createRoom(v as unknown as Omit<Room, 'id' | 'availableRooms'>);
+      }}
       onUpdate={(room, v) => {
         const total = Number(v.totalRooms);
-        // keep the "rooms free" count correct when the total changes
         const free = Math.max(0, room.availableRooms + (total - room.totalRooms));
         updateRoom(room.id, { ...(v as Partial<Room>), availableRooms: free });
       }}

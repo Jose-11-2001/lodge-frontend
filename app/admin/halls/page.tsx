@@ -7,7 +7,7 @@ import { money } from '@/lib/format';
 import { Hall } from '@/types';
 
 export default function AdminHallsPage() {
-  const { halls, createHall, updateHall, deleteHall } = useLodge();
+  const { halls, createHall, updateHall, deleteHall, showToast } = useLodge();
 
   return (
     <CrudManager<Hall>
@@ -17,6 +17,7 @@ export default function AdminHallsPage() {
       noun="Hall"
       emptyText="No halls yet."
       items={halls}
+      notify={showToast}
       fields={[
         { key: 'name', label: 'Name', type: 'text' },
         { key: 'building', label: 'Building', type: 'text' },
@@ -33,8 +34,12 @@ export default function AdminHallsPage() {
         { label: 'Per day', render: (h) => money(h.pricePerDay) },
         { label: 'Status', render: (h) => <span className={`badge ${h.available ? 'ok' : 'bad'}`}>{h.available ? 'Available' : 'Booked'}</span> },
       ]}
-      onCreate={(v) => createHall(v as unknown as Omit<Hall, 'id' | 'available'>)}
-      onUpdate={(hall, v) => updateHall(hall.id, v as Partial<Hall>)}
+      onCreate={(v) => {
+        createHall(v as unknown as Omit<Hall, 'id' | 'available'>);
+      }}
+      onUpdate={(hall, v) => {
+        updateHall(hall.id, v as Partial<Hall>);
+      }}
       onDelete={deleteHall}
     />
   );

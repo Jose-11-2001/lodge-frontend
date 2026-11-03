@@ -7,7 +7,7 @@ import { money } from '@/lib/format';
 import { Meal } from '@/types';
 
 export default function AdminMealsPage() {
-  const { meals, createMeal, updateMeal, deleteMeal } = useLodge();
+  const { meals, createMeal, updateMeal, deleteMeal, showToast } = useLodge();
 
   return (
     <CrudManager<Meal>
@@ -17,6 +17,7 @@ export default function AdminMealsPage() {
       noun="Meal"
       emptyText="No meals yet."
       items={meals}
+      notify={showToast}
       fields={[
         { key: 'name', label: 'Name', type: 'text' },
         { key: 'mealType', label: 'Meal type', type: 'select', options: ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] },
@@ -29,8 +30,12 @@ export default function AdminMealsPage() {
         { label: 'Price', render: (m) => money(m.price) },
         { label: 'Description', render: (m) => m.description },
       ]}
-      onCreate={(v) => createMeal(v as unknown as Omit<Meal, 'id'>)}
-      onUpdate={(meal, v) => updateMeal(meal.id, v as Partial<Meal>)}
+      onCreate={(v) => {
+        createMeal(v as unknown as Omit<Meal, 'id'>);
+      }}
+      onUpdate={(meal, v) => {
+        updateMeal(meal.id, v as Partial<Meal>);
+      }}
       onDelete={deleteMeal}
     />
   );

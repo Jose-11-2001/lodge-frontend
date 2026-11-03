@@ -3,8 +3,8 @@ import { Booking, Feedback } from '@/types';
 export function getRoomReviews(feedback: Feedback[], bookings: Booking[], roomId: number) {
   const reviews = feedback.filter(
     (f) =>
-      f.bookingId !== null &&
-      f.comment.trim() !== '' &&
+      f.bookingId != null &&
+      (f.comment ?? '').trim() !== '' &&          // FIXED: comment may be undefined
       bookings.find((b) => b.id === f.bookingId)?.roomId === roomId
   );
   const count = reviews.length;

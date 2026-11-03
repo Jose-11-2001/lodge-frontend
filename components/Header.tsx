@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useLodge } from '@/context/LodgeContext';
+import { auth, authApi } from '@/lib/api';
 
 interface NavItem {
   label: string;
@@ -12,13 +12,24 @@ interface NavItem {
 }
 
 export default function Header() {
-  const { user, logout, theme, toggleTheme } = useLodge();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const pathname = usePathname();
   const router = useRouter();
 
+  const role = auth.role();
+  const username = auth.username();
+
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.theme = next;
+    }
+  };
+
   const getNavItems = (): NavItem[] => {
-    if (!user) {
+    if (!auth.isLoggedIn()) {
       return [
         { label: 'Rooms', href: '/rooms' },
         { label: 'Meals', href: '/meals' },
@@ -27,8 +38,8 @@ export default function Header() {
         { label: 'Get started', href: '/register', primary: true },
       ];
     }
-    if (user.role === 'ADMIN') {
-       return [
+    if (role === 'ADMIN') {
+      return [
         { label: 'Dashboard', href: '/admin/dashboard' },
         { label: 'Rooms', href: '/admin/rooms' },
         { label: 'Meals', href: '/admin/meals' },
@@ -43,8 +54,7 @@ export default function Header() {
       { label: 'Halls', href: '/halls' },
       { label: 'My Bookings', href: '/my-bookings' },
       { label: 'My Halls', href: '/my-hall-bookings' },
-      { label: 'My Meals', href: '/my-meals' },
-      { label: 'Feedback', href: '/feedback' },
+      { label: 'Notifications', href: '/notifications' },
     ];
   };
 
@@ -52,7 +62,7 @@ export default function Header() {
   const isActive = (href: string) => pathname === href;
 
   const handleLogout = () => {
-    logout();
+    authApi.logout();
     setDrawerOpen(false);
     router.push('/');
   };
@@ -63,28 +73,32 @@ export default function Header() {
   return (
     <>
       <header className="flex flex-row items-center justify-between gap-4 px-4 sm:px-7 py-3.5 bg-[var(--panel)] backdrop-blur-md border-b border-[var(--line)] sticky top-0 z-20 transition-colors">
-        <Link className="flex items-center gap-2.5 shrink-0 cursor-pointer no-underline text-inherit" href="/">
-          <div className="w-9 h-9 rounded-[11px] bg-[image:var(--grad-1)] flex items-center justify-center text-[19px] shadow-[var(--shadow-glow)] animate-[floatY_3.4s_ease-in-out_infinite]">
-            🏨
-          </div>
+        <Link
+          className="flex items-center gap-2.5 shrink-0 cursor-pointer no-underline text-inherit"
+          href="/"
+        >
+          <div className="w-9 h-9 rounded-[11px] bg-[image:var(--grad-1)] flex items-center justify-center text-[19px] shadow-[var(--shadow-glow)]" />
           <h1 className="m-0 flex items-center font-fraunces font-bold text-[20px] tracking-[0.3px] whitespace-nowrap">
             Lodge
-            <em className="not-italic bg-[image:var(--grad-1)] bg-[length:200%_100%] bg-clip-text text-transparent animate-[gradientShift_6s_ease_infinite]">
+            <em className="not-italic bg-[image:var(--grad-1)] bg-[length:200%_100%] bg-clip-text text-transparent">
               App
             </em>
           </h1>
         </Link>
 
-        {/* Desktop nav: same row as the logo, visible from 821px up */}
         <nav className="hidden min-[821px]:flex flex-row flex-wrap items-center justify-end gap-1.5">
           {navItems.map((item) => {
-            let cls = 'px-4 py-[9px] rounded-full text-sm font-medium transition-all no-underline cursor-pointer whitespace-nowrap ';
+            let cls =
+              'px-4 py-[9px] rounded-full text-sm font-medium transition-all no-underline cursor-pointer whitespace-nowrap ';
             if (item.primary) {
-              cls += 'bg-[image:var(--grad-2)] text-[#052018] font-semibold shadow-[0_8px_24px_rgba(34,211,168,0.25)]';
+              cls +=
+                'bg-[image:var(--grad-2)] text-[#052018] font-semibold shadow-[0_8px_24px_rgba(34,211,168,0.25)]';
             } else if (isActive(item.href)) {
-              cls += 'text-[#06142b] bg-[image:var(--grad-1)] font-semibold shadow-[var(--shadow-glow)]';
+              cls +=
+                'text-[#06142b] bg-[image:var(--grad-1)] font-semibold shadow-[var(--shadow-glow)]';
             } else {
-              cls += 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[rgba(120,150,220,0.08)]';
+              cls +=
+                'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[rgba(120,150,220,0.08)]';
             }
             return (
               <Link key={item.href} href={item.href} className={cls}>
@@ -95,19 +109,19 @@ export default function Header() {
 
           <button
             onClick={toggleTheme}
-            className="w-[38px] h-[38px] shrink-0 rounded-full flex items-center justify-center border border-[var(--line-2)] bg-[rgba(120,150,220,0.06)] text-[15px] cursor-pointer hover:border-[var(--accent)] transition-all"
+            className="w-[38px] h-[38px] shrink-0 rounded-full flex items-center justify-center border border-[var(--line-2)] bg-[rgba(120,150,220,0.06)] text-[13px] font-semibold cursor-pointer hover:border-[var(--accent)] transition-all"
             title="Toggle theme"
             aria-label="Toggle theme"
           >
-            {theme === 'light' ? '🌙' : '☀️'}
+            {theme === 'light' ? 'Dark' : 'Light'}
           </button>
 
-          {user && (
+          {auth.isLoggedIn() && (
             <>
               <div className="inline-flex items-center gap-2 py-[5px] pl-1 lg:pl-3.5 pr-[5px] rounded-full border border-[var(--line-2)] bg-[rgba(120,150,220,0.06)] text-[13px] text-[var(--text)] ml-1">
-                <span className="hidden lg:inline">{user.username}</span>
+                <span className="hidden lg:inline">{username}</span>
                 <div className="w-7 h-7 rounded-full bg-[image:var(--grad-1)] flex items-center justify-center text-xs font-bold text-[#06142b]">
-                  {user.username[0].toUpperCase()}
+                  {username?.[0]?.toUpperCase() ?? '?'}
                 </div>
               </div>
               <button
@@ -120,17 +134,15 @@ export default function Header() {
           )}
         </nav>
 
-        {/* Mobile hamburger: only up to 820px */}
         <button
           className="min-[821px]:hidden bg-transparent border-none text-[var(--text)] text-[22px] cursor-pointer p-1.5"
           onClick={() => setDrawerOpen(true)}
           aria-label="Open menu"
         >
-          ☰
+          Menu
         </button>
       </header>
 
-      {/* Mobile drawer */}
       {drawerOpen && (
         <div
           className="fixed inset-0 bg-[rgba(2,6,20,0.6)] backdrop-blur-sm z-40 min-[821px]:hidden"
@@ -143,21 +155,29 @@ export default function Header() {
         }`}
       >
         <button
-          className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full border border-[var(--line-2)] bg-transparent text-[var(--text)] cursor-pointer flex items-center justify-center"
+          className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full border border-[var(--line-2)] bg-transparent text-[var(--text)] cursor-pointer flex items-center justify-center text-xs"
           onClick={() => setDrawerOpen(false)}
           aria-label="Close menu"
         >
-          ✕
+          Close
         </button>
         <h3 className="m-0 mb-1 font-fraunces text-lg">Menu</h3>
-        {user && <p className="m-0 mb-2.5 text-xs text-[var(--muted)]">Signed in as {user.username}</p>}
+        {auth.isLoggedIn() && (
+          <p className="m-0 mb-2.5 text-xs text-[var(--muted)]">
+            Signed in as {username}
+          </p>
+        )}
         <div className="flex flex-col gap-1.5">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setDrawerOpen(false)}
-              className={`${drawerBtn} ${isActive(item.href) ? 'bg-[rgba(120,150,220,0.14)] font-semibold' : ''}`}
+              className={`${drawerBtn} ${
+                isActive(item.href)
+                  ? 'bg-[rgba(120,150,220,0.14)] font-semibold'
+                  : ''
+              }`}
             >
               {item.label}
             </Link>
@@ -169,9 +189,9 @@ export default function Header() {
             }}
             className={drawerBtn}
           >
-            {theme === 'light' ? '🌙 Dark mode' : '☀️ Light mode'}
+            {theme === 'light' ? 'Dark mode' : 'Light mode'}
           </button>
-          {user && (
+          {auth.isLoggedIn() && (
             <button onClick={handleLogout} className={drawerBtn}>
               Logout
             </button>
