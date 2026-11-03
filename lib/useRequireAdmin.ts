@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLodge } from '@/context/LodgeContext';
+import { hasSavedSession } from '@/lib/auth';
 
 export function useRequireAdmin() {
   const { user, showToast } = useLodge();
@@ -16,8 +17,10 @@ export function useRequireAdmin() {
       }
       return;
     }
-    // no user yet: if a saved session exists it is still loading, so wait
-    if (!sessionStorage.getItem('lodge_user')) {
+
+    // No user yet. If a token exists in localStorage, the context is still
+    // hydrating — wait. Only redirect when there is truly no session.
+    if (!hasSavedSession()) {
       showToast('Please log in as admin', true);
       router.push('/login');
     }
