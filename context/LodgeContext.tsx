@@ -131,16 +131,44 @@ const LodgeContext = createContext<LodgeContextType | undefined>(undefined);
 
 // ─────────────────────────────────────────────────────────────
 // Helpers: map backend DTOs → frontend model types
-// (They're structurally identical, but the casts make TS happy
-//  if the model type ever drifts.)
+// Normalize optional fields so the frontend model's stricter
+// shapes (e.g. paymentReference: string | null) are satisfied.
 // ─────────────────────────────────────────────────────────────
 
-const roomFromDto = (r: RoomDto): Room => ({ ...r });
-const mealFromDto = (m: MealDto): Meal => ({ ...m });
-const hallFromDto = (h: HallDto): Hall => ({ ...h });
-const bookingFromDto = (b: BookingResponse): Booking => ({ ...b });
-const hallBookingFromDto = (b: HallBookingResponse): HallBooking => ({ ...b });
-const feedbackFromDto = (f: FeedbackDto): Feedback => ({ ...f });
+const roomFromDto = (r: RoomDto): Room => ({
+  ...r,
+  primaryImage: r.primaryImage ?? undefined,
+  images: r.images ?? [],
+});
+
+const mealFromDto = (m: MealDto): Meal => ({
+  ...m,
+  primaryImage: m.primaryImage ?? undefined,
+  images: m.images ?? [],
+});
+
+const hallFromDto = (h: HallDto): Hall => ({
+  ...h,
+  primaryImage: h.primaryImage ?? undefined,
+  images: h.images ?? [],
+});
+
+const bookingFromDto = (b: BookingResponse): Booking => ({
+  ...b,
+  paymentReference: b.paymentReference ?? null,
+  paymentMethod: b.paymentMethod ?? null,
+});
+
+const hallBookingFromDto = (b: HallBookingResponse): HallBooking => ({
+  ...b,
+  paymentReference: b.paymentReference ?? null,
+  paymentMethod: b.paymentMethod ?? null,
+});
+
+const feedbackFromDto = (f: FeedbackDto): Feedback => ({
+  ...f,
+  bookingId: f.bookingId ?? null,
+});
 
 const extractError = (e: unknown): Error => {
   if (e instanceof ApiError) {
@@ -195,7 +223,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // ── session hydration ─────────────────────────────────────
-  // Read the token + username that api.ts wrote via auth.save().
   useEffect(() => {
     if (!hasSavedSession()) return;
     const storedUser = localStorage.getItem(USER_KEY);
@@ -209,7 +236,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      // Public endpoints — always available
       const [r, m, h] = await Promise.all([
         publicApi.rooms(),
         publicApi.meals(),
@@ -219,7 +245,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setMeals(m.map(mealFromDto));
       setHalls(h.map(hallFromDto));
 
-      // Authenticated endpoints — only when a token exists
       if (authStore.isLoggedIn()) {
         const [myBookings, myHallBookings] = await Promise.all([
           bookingsApi.mine().catch(() => []),
@@ -228,7 +253,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setBookings(myBookings.map(bookingFromDto));
         setHallBookings(myHallBookings.map(hallBookingFromDto));
 
-        // Admin-only data
         if (authStore.isAdmin()) {
           const [allBookings, allHallBookings, allFeedback] = await Promise.all([
             adminApi.listBookings({ size: 100 }).catch(() => null),
@@ -247,7 +271,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [showToast]);
 
-  // Load on mount, and again whenever the user changes (login/logout).
   useEffect(() => {
     refresh();
   }, [refresh, user]);
@@ -307,7 +330,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const b = await bookingsApi.create(data);
       const mapped = bookingFromDto(b);
       setBookings((prev) => [...prev, mapped]);
-      // Refresh public rooms so availability updates in the UI
       const r = await publicApi.rooms();
       setRooms(r.map(roomFromDto));
       return mapped;
@@ -317,13 +339,8 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const payBooking = async (id: number, _method: PaymentMethod): Promise<Booking> => {
-    // Real backend flow: initiate-payment redirects to the PayChangu checkout,
-    // and verify-payment is called after return. UI "pay now" should call
-    // bookingsApi.initiatePayment(id) (already redirects).
     try {
       await bookingsApi.initiatePayment(id);
-      // If we reach here, the browser is about to navigate away.
-      // After returning, the caller should call verifyBookingPayment(id).
       const b = bookings.find((x) => x.id === id);
       return b ?? ({} as Booking);
     } catch (e) {
@@ -389,10 +406,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // ── meal orders ⚠ NOT BACKEND-SUPPORTED ───────────────────
-  // Your /v3/api-docs has no /api/meal-orders endpoints.
-  // These throw so the UI can't silently persist fake orders.
-  // When you add Spring Boot endpoints, replace the bodies below
-  // with `request<...>('/api/meal-orders', ...)` calls.
   const createMealOrder = async (_data: {
     mealId: number;
     quantity: number;

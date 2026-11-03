@@ -9,7 +9,7 @@ import { money, dateOnly, dateTime } from '@/lib/format';
 import { BookingStatus, PaymentMethod } from '@/types';
 import type { BookingStatusInput } from '@/lib/api';
 
-type Tab = 'rooms' | 'halls' | 'meals';
+type Tab = 'rooms' | 'halls';
 
 interface Row {
   id: number;
@@ -25,14 +25,18 @@ interface Row {
 export default function AdminBookingsPage() {
   const admin = useRequireAdmin();
   const {
-    bookings, hallBookings, mealOrders,
-    updateBookingStatus, updateHallBookingStatus, updateMealOrderStatus, showToast,
+    bookings, hallBookings,
+    updateBookingStatus, updateHallBookingStatus, showToast,
   } = useLodge();
   const [tab, setTab] = useState<Tab>('rooms');
 
   if (!admin) return null;
 
-  const data: Record<Tab, { rows: Row[]; update: (id: number, s: BookingStatus) => void; icon: string }> = {
+  const data: Record<Tab, {
+    rows: Row[];
+    update: (id: number, s: BookingStatusInput) => Promise<void>;
+    icon: string;
+  }> = {
     rooms: {
       icon: '🛏️',
       update: updateBookingStatus,
@@ -61,28 +65,18 @@ export default function AdminBookingsPage() {
         method: h.paymentMethod ?? null,
       })),
     },
-    meals: {
-      icon: '🍽️',
-      update: updateMealOrderStatus,
-      rows: mealOrders.map((o) => ({
-        id: o.id,
-        customer: o.customerUsername,
-        item: `${o.mealName} × ${o.quantity}`,
-        when: dateTime(o.serveAt),
-        total: o.totalPrice,
-        status: o.status,
-        paid: o.paid,
-        method: o.paymentMethod ?? null,
-      })),
-    },
   };
 
   const current = data[tab];
   const list = [...current.rows].reverse();
 
-  const change = (id: number, status: BookingStatus, message: string) => {
+  const change = async (
+    id: number,
+    status: BookingStatusInput,
+    message: string
+  ) => {
     try {
-      current.update(id, status);
+      await current.update(id, status);
       showToast(message);
     } catch (err) {
       showToast((err as Error).message, true);
@@ -92,7 +86,6 @@ export default function AdminBookingsPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'rooms', label: `Rooms (${bookings.length})` },
     { key: 'halls', label: `Halls (${hallBookings.length})` },
-    { key: 'meals', label: `Meals (${mealOrders.length})` },
   ];
 
   return (
@@ -100,7 +93,7 @@ export default function AdminBookingsPage() {
       <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
         <div>
           <h2 className="m-0 font-fraunces font-bold text-[34px] tracking-tight">Bookings</h2>
-          <p className="m-0 mt-1 text-sm text-[var(--muted)]">Confirm, complete or cancel what customers book.</p>
+          <p className="m-0 mt-1 text-sm text-[var(--muted)]">Confirm or cancel what customers book.</p>
         </div>
         <Link href="/admin/dashboard" className="btn btn-ghost no-underline">← Dashboard</Link>
       </div>
@@ -149,11 +142,7 @@ export default function AdminBookingsPage() {
                         <button className="btn btn-primary" style={{ padding: '6px 14px' }}
                           onClick={() => change(r.id, 'CONFIRMED', 'Booking confirmed')}>Confirm</button>
                       )}
-                      {r.status === 'CONFIRMED' && (
-                        <button className="btn btn-ghost" style={{ padding: '6px 14px' }}
-                          onClick={() => change(r.id, 'COMPLETED', 'Marked as completed')}>Complete</button>
-                      )}
-                      {r.status !== 'CANCELLED' && r.status !== 'COMPLETED' && (
+                      {r.status !== 'CANCELLED' && (
                         <button className="btn btn-danger" style={{ padding: '6px 14px' }}
                           onClick={() => change(r.id, 'CANCELLED', 'Booking cancelled')}>Cancel</button>
                       )}
