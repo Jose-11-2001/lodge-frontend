@@ -83,11 +83,6 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           {isLogin ? 'Create an account' : 'Login'}
         </Link>
       </p>
-      {isLogin && (
-        <p className="mt-3 mb-0 text-xs text-[var(--muted)]">
-          Admin account is seeded on first run: admin / admin123
-        </p>
-      )}
     </div>
   );
 }
