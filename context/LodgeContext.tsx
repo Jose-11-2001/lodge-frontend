@@ -1,6 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from 'react';
 import {
   User,
   Room,
@@ -13,53 +20,48 @@ import {
   BookingStatus,
   PaymentMethod,
 } from '@/types';
+import {
+  auth as authStore,
+  authApi,
+  publicApi,
+  bookingsApi,
+  hallBookingsApi,
+  feedbackApi,
+  adminApi,
+  ApiError,
+  RoomDto,
+  MealDto,
+  HallDto,
+  BookingResponse,
+  HallBookingResponse,
+  FeedbackDto,
+  RoomRequest,
+  MealRequest,
+  HallRequest,
+  BookingStatusInput,
+} from '@/lib/api';
+import { USER_KEY, ROLE_KEY, hasSavedSession } from '@/lib/auth';
 
-const DB_KEY = 'lodge_db_v4';
+// ─────────────────────────────────────────────────────────────
+// Context shape — SAME names as before, so components don't change.
+// The difference: every method now calls the Spring Boot backend
+// via api.ts instead of mutating localStorage.
+// ─────────────────────────────────────────────────────────────
 
-interface StoredUser extends User {
-  password: string;
-}
-
-interface LodgeDatabase {
-  users: StoredUser[];
-  rooms: Room[];
-  meals: Meal[];
-  halls: Hall[];
-  bookings: Booking[];
-  hallBookings: HallBooking[];
-  mealOrders: MealOrder[];
-  feedback: Feedback[];
-  seq: {
-    rooms: number;
-    meals: number;
-    halls: number;
-    bookings: number;
-    hallBookings: number;
-    mealOrders: number;
-    feedback: number;
-  };
-}
-
-const seedData = (): LodgeDatabase => ({
-  users: [
-    { id: 1, username: 'admin', password: 'admin', role: 'ADMIN' as const },
-  ],
-  rooms: [] as Room[],
-  meals: [] as Meal[],
-  halls: [] as Hall[],
-  bookings: [] as Booking[],
-  hallBookings: [] as HallBooking[],
-  mealOrders: [] as MealOrder[],
-  feedback: [] as Feedback[],
-  seq: { rooms: 1, meals: 1, halls: 1, bookings: 1, hallBookings: 1, mealOrders: 1, feedback: 1 },
-});
 interface LodgeContextType {
+  // ui
   theme: string;
   toggleTheme: () => void;
+  toastMessage: { msg: string; err?: boolean } | null;
+  showToast: (msg: string, err?: boolean) => void;
+
+  // auth
   user: User | null;
-  login: (credentials: { username: string; password: string }) => User;
-  register: (credentials: { username: string; password: string }) => User;
+  login: (credentials: { username: string; password: string }) => Promise<User>;
+  register: (credentials: { username: string; password: string }) => Promise<User>;
   logout: () => void;
+
+  // data (read-only caches loaded from backend)
   rooms: Room[];
   meals: Meal[];
   halls: Hall[];
@@ -67,66 +69,123 @@ interface LodgeContextType {
   hallBookings: HallBooking[];
   mealOrders: MealOrder[];
   feedbackList: Feedback[];
-  createBooking: (data: { roomId: number; checkIn: string; checkOut: string; roomCount?: number }) => Booking;
-  payBooking: (id: number, method: PaymentMethod) => Booking;
-  cancelBooking: (id: number) => void;
-  createHallBooking: (data: { hallId: number; startTime: string; endTime: string; purpose: string; attendees: number; billingMode?: 'HOURLY' | 'DAILY' }) => HallBooking;
-  payHallBooking: (id: number, method: PaymentMethod) => HallBooking;
-  cancelHallBooking: (id: number) => void;
-  createMealOrder: (data: { mealId: number; quantity: number; serveAt: string }) => MealOrder;
-  payMealOrder: (id: number, method: PaymentMethod) => MealOrder;
-  cancelMealOrder: (id: number) => void;
-  createFeedback: (data: { bookingId?: number | null; rating: number; comment: string }) => Feedback;
-  createRoom: (data: Omit<Room, 'id' | 'availableRooms'>) => Room;
-  updateRoom: (id: number, data: Partial<Room>) => void;
-  deleteRoom: (id: number) => void;
-  createMeal: (data: Omit<Meal, 'id'>) => Meal;
-  updateMeal: (id: number, data: Partial<Meal>) => void;
-  deleteMeal: (id: number) => void;
-  createHall: (data: Omit<Hall, 'id' | 'available'>) => Hall;
-  updateHall: (id: number, data: Partial<Hall>) => void;
-  deleteHall: (id: number) => void;
-  updateBookingStatus: (id: number, status: BookingStatus) => void;
-  updateHallBookingStatus: (id: number, status: BookingStatus) => void;
-  updateMealOrderStatus: (id: number, status: BookingStatus) => void;
-  resolveFeedback: (id: number) => void;
-  toastMessage: { msg: string; err?: boolean } | null;
-  showToast: (msg: string, err?: boolean) => void;
+  loading: boolean;
+  refresh: () => Promise<void>;
+
+  // customer actions
+  createBooking: (data: {
+    roomId: number;
+    checkIn: string;
+    checkOut: string;
+    roomCount?: number;
+  }) => Promise<Booking>;
+  payBooking: (id: number, method: PaymentMethod) => Promise<Booking>;
+  cancelBooking: (id: number) => Promise<void>;
+
+  createHallBooking: (data: {
+    hallId: number;
+    startTime: string;
+    endTime: string;
+    purpose: string;
+    attendees: number;
+    billingMode?: 'HOURLY' | 'DAILY';
+  }) => Promise<HallBooking>;
+  payHallBooking: (id: number, method: PaymentMethod) => Promise<HallBooking>;
+  cancelHallBooking: (id: number) => Promise<void>;
+
+  // ⚠ Not supported by the backend yet — see TODO inside implementation.
+  createMealOrder: (data: {
+    mealId: number;
+    quantity: number;
+    serveAt: string;
+  }) => Promise<MealOrder>;
+  payMealOrder: (id: number, method: PaymentMethod) => Promise<MealOrder>;
+  cancelMealOrder: (id: number) => Promise<void>;
+
+  createFeedback: (data: {
+    bookingId?: number | null;
+    rating: number;
+    comment: string;
+  }) => Promise<Feedback>;
+
+  // admin actions
+  createRoom: (data: Omit<Room, 'id' | 'availableRooms'>) => Promise<Room>;
+  updateRoom: (id: number, data: Partial<Room>) => Promise<void>;
+  deleteRoom: (id: number) => Promise<void>;
+
+  createMeal: (data: Omit<Meal, 'id'>) => Promise<Meal>;
+  updateMeal: (id: number, data: Partial<Meal>) => Promise<void>;
+  deleteMeal: (id: number) => Promise<void>;
+
+  createHall: (data: Omit<Hall, 'id' | 'available'>) => Promise<Hall>;
+  updateHall: (id: number, data: Partial<Hall>) => Promise<void>;
+  deleteHall: (id: number) => Promise<void>;
+
+  updateBookingStatus: (id: number, status: BookingStatusInput) => Promise<void>;
+  updateHallBookingStatus: (id: number, status: BookingStatusInput) => Promise<void>;
+  updateMealOrderStatus: (id: number, status: BookingStatus) => Promise<void>;
+  resolveFeedback: (id: number, resolved?: boolean) => Promise<void>;
 }
 
 const LodgeContext = createContext<LodgeContextType | undefined>(undefined);
 
+// ─────────────────────────────────────────────────────────────
+// Helpers: map backend DTOs → frontend model types
+// (They're structurally identical, but the casts make TS happy
+//  if the model type ever drifts.)
+// ─────────────────────────────────────────────────────────────
+
+const roomFromDto = (r: RoomDto): Room => ({ ...r });
+const mealFromDto = (m: MealDto): Meal => ({ ...m });
+const hallFromDto = (h: HallDto): Hall => ({ ...h });
+const bookingFromDto = (b: BookingResponse): Booking => ({ ...b });
+const hallBookingFromDto = (b: HallBookingResponse): HallBooking => ({ ...b });
+const feedbackFromDto = (f: FeedbackDto): Feedback => ({ ...f });
+
+const extractError = (e: unknown): Error => {
+  if (e instanceof ApiError) {
+    return new Error(e.message || `Request failed (${e.status})`);
+  }
+  if (e instanceof Error) return e;
+  return new Error('Unknown error');
+};
+
+// ─────────────────────────────────────────────────────────────
+// Provider
+// ─────────────────────────────────────────────────────────────
+
 export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // ui
   const [theme, setThemeState] = useState<string>('dark');
-  const [user, setUser] = useState<User | null>(null);
-  const [db, setDb] = useState<LodgeDatabase>(seedData);
   const [toastMessage, setToastMessage] = useState<{ msg: string; err?: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // session
+  const [user, setUser] = useState<User | null>(null);
+
+  // backend-backed caches
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [meals, setMeals] = useState<Meal[]>([]);
+  const [halls, setHalls] = useState<Hall[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [hallBookings, setHallBookings] = useState<HallBooking[]>([]);
+  const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
+  // Meal orders aren't in the backend yet — keep empty.
+  const [mealOrders] = useState<MealOrder[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+
+  const showToast = useCallback((msg: string, err = false) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToastMessage({ msg, err });
+    toastTimer.current = setTimeout(() => setToastMessage(null), 3000);
+  }, []);
+
+  // ── theme (local only) ─────────────────────────────────────
   useEffect(() => {
     const savedTheme = localStorage.getItem('lodge_theme') || 'dark';
     setThemeState(savedTheme);
     document.documentElement.setAttribute('data-theme', savedTheme);
-
-    const savedUser = sessionStorage.getItem('lodge_user');
-    if (savedUser) setUser(JSON.parse(savedUser));
-
-    const savedDb = localStorage.getItem(DB_KEY);
-    if (savedDb) {
-      const seed = seedData();
-      const parsed = JSON.parse(savedDb);
-      setDb({ ...seed, ...parsed, seq: { ...seed.seq, ...parsed.seq } });
-    } else {
-      const initial = seedData();
-      localStorage.setItem(DB_KEY, JSON.stringify(initial));
-      setDb(initial);
-    }
   }, []);
-
-  const saveDb = (newDb: LodgeDatabase) => {
-    setDb(newDb);
-    localStorage.setItem(DB_KEY, JSON.stringify(newDb));
-  };
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light';
@@ -135,301 +194,467 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     document.documentElement.setAttribute('data-theme', next);
   };
 
-  const showToast = (msg: string, err = false) => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToastMessage({ msg, err });
-    toastTimer.current = setTimeout(() => setToastMessage(null), 3000);
+  // ── session hydration ─────────────────────────────────────
+  // Read the token + username that api.ts wrote via auth.save().
+  useEffect(() => {
+    if (!hasSavedSession()) return;
+    const storedUser = localStorage.getItem(USER_KEY);
+    const storedRole = localStorage.getItem(ROLE_KEY);
+    if (storedUser && storedRole) {
+      setUser({ id: 0, username: storedUser, role: storedRole as User['role'] });
+    }
+  }, []);
+
+  // ── data loading ──────────────────────────────────────────
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      // Public endpoints — always available
+      const [r, m, h] = await Promise.all([
+        publicApi.rooms(),
+        publicApi.meals(),
+        publicApi.halls(),
+      ]);
+      setRooms(r.map(roomFromDto));
+      setMeals(m.map(mealFromDto));
+      setHalls(h.map(hallFromDto));
+
+      // Authenticated endpoints — only when a token exists
+      if (authStore.isLoggedIn()) {
+        const [myBookings, myHallBookings] = await Promise.all([
+          bookingsApi.mine().catch(() => []),
+          hallBookingsApi.mine().catch(() => []),
+        ]);
+        setBookings(myBookings.map(bookingFromDto));
+        setHallBookings(myHallBookings.map(hallBookingFromDto));
+
+        // Admin-only data
+        if (authStore.isAdmin()) {
+          const [allBookings, allHallBookings, allFeedback] = await Promise.all([
+            adminApi.listBookings({ size: 100 }).catch(() => null),
+            adminApi.listHallBookings({ size: 100 }).catch(() => null),
+            adminApi.listFeedback({ size: 100 }).catch(() => null),
+          ]);
+          if (allBookings) setBookings(allBookings.content.map(bookingFromDto));
+          if (allHallBookings) setHallBookings(allHallBookings.content.map(hallBookingFromDto));
+          if (allFeedback) setFeedbackList(allFeedback.content.map(feedbackFromDto));
+        }
+      }
+    } catch (e) {
+      showToast(extractError(e).message, true);
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  // Load on mount, and again whenever the user changes (login/logout).
+  useEffect(() => {
+    refresh();
+  }, [refresh, user]);
+
+  // ── auth ──────────────────────────────────────────────────
+  const login = async ({
+    username,
+    password,
+  }: {
+    username: string;
+    password: string;
+  }): Promise<User> => {
+    try {
+      const res = await authApi.login(username, password);
+      const u: User = { id: 0, username: res.username, role: res.role };
+      setUser(u);
+      return u;
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  /* ---------------- auth ---------------- */
-  const startSession = (u: StoredUser): User => {
-    const userData: User = { id: u.id, username: u.username, role: u.role };
-    setUser(userData);
-    sessionStorage.setItem('lodge_user', JSON.stringify(userData));
-    return userData;
-  };
-
-  const login = ({ username, password }: { username: string; password: string }) => {
-    const found = db.users.find((u) => u.username === username && u.password === password);
-    if (!found) throw new Error('Invalid credentials');
-    return startSession(found);
-  };
-
-  const register = ({ username, password }: { username: string; password: string }) => {
-    if (db.users.find((u) => u.username === username)) throw new Error('Username taken');
-    const newUser: StoredUser = {
-      id: Math.max(0, ...db.users.map((u) => u.id)) + 1,
-      username,
-      password,
-      role: 'CUSTOMER',
-    };
-    saveDb({ ...db, users: [...db.users, newUser] });
-    return startSession(newUser);
+  const register = async ({
+    username,
+    password,
+  }: {
+    username: string;
+    password: string;
+  }): Promise<User> => {
+    try {
+      const res = await authApi.register(username, password);
+      const u: User = { id: 0, username: res.username, role: res.role };
+      setUser(u);
+      return u;
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
   const logout = () => {
+    authApi.logout();
     setUser(null);
-    sessionStorage.removeItem('lodge_user');
+    setBookings([]);
+    setHallBookings([]);
+    setFeedbackList([]);
+    showToast('Logged out');
   };
 
-  /* ---------------- room bookings ---------------- */
-  const createBooking = ({ roomId, checkIn, checkOut, roomCount = 1 }: { roomId: number; checkIn: string; checkOut: string; roomCount?: number }) => {
-    if (!user) throw new Error('User not logged in');
-    const room = db.rooms.find((r) => r.id === roomId);
-    if (!room) throw new Error('Room not found');
-    if (room.availableRooms < roomCount) throw new Error('Not enough rooms available');
-
-    const nights = Math.max(1, Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000));
-    const newBooking: Booking = {
-      id: db.seq.bookings,
-      roomId,
-      roomName: room.name,
-      customerUsername: user.username,
-      checkIn,
-      checkOut,
-      roomCount,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      paid: false,
-      totalAmount: nights * room.pricePerNight * roomCount,
-      paymentReference: null,
-      paymentMethod: null,
-    };
-
-    saveDb({
-      ...db,
-      rooms: db.rooms.map((r) => (r.id === roomId ? { ...r, availableRooms: r.availableRooms - roomCount } : r)),
-      bookings: [...db.bookings, newBooking],
-      seq: { ...db.seq, bookings: db.seq.bookings + 1 },
-    });
-    return newBooking;
+  // ── room bookings ─────────────────────────────────────────
+  const createBooking = async (data: {
+    roomId: number;
+    checkIn: string;
+    checkOut: string;
+    roomCount?: number;
+  }): Promise<Booking> => {
+    try {
+      const b = await bookingsApi.create(data);
+      const mapped = bookingFromDto(b);
+      setBookings((prev) => [...prev, mapped]);
+      // Refresh public rooms so availability updates in the UI
+      const r = await publicApi.rooms();
+      setRooms(r.map(roomFromDto));
+      return mapped;
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const payBooking = (id: number, method: PaymentMethod): Booking => {
-    const updated: Booking[] = db.bookings.map((b) =>
-      b.id === id
-        ? { ...b, paid: true, status: 'CONFIRMED' as BookingStatus, paymentMethod: method, paymentReference: 'PAY-' + Date.now() }
-        : b
+  const payBooking = async (id: number, _method: PaymentMethod): Promise<Booking> => {
+    // Real backend flow: initiate-payment redirects to the PayChangu checkout,
+    // and verify-payment is called after return. UI "pay now" should call
+    // bookingsApi.initiatePayment(id) (already redirects).
+    try {
+      await bookingsApi.initiatePayment(id);
+      // If we reach here, the browser is about to navigate away.
+      // After returning, the caller should call verifyBookingPayment(id).
+      const b = bookings.find((x) => x.id === id);
+      return b ?? ({} as Booking);
+    } catch (e) {
+      throw extractError(e);
+    }
+  };
+
+  const cancelBooking = async (id: number): Promise<void> => {
+    try {
+      await bookingsApi.cancel(id);
+      setBookings((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, status: 'CANCELLED' } : b))
+      );
+      const r = await publicApi.rooms();
+      setRooms(r.map(roomFromDto));
+    } catch (e) {
+      throw extractError(e);
+    }
+  };
+
+  // ── hall bookings ─────────────────────────────────────────
+  const createHallBooking = async (data: {
+    hallId: number;
+    startTime: string;
+    endTime: string;
+    purpose: string;
+    attendees: number;
+    billingMode?: 'HOURLY' | 'DAILY';
+  }): Promise<HallBooking> => {
+    try {
+      const hb = await hallBookingsApi.create(data);
+      const mapped = hallBookingFromDto(hb);
+      setHallBookings((prev) => [...prev, mapped]);
+      const h = await publicApi.halls();
+      setHalls(h.map(hallFromDto));
+      return mapped;
+    } catch (e) {
+      throw extractError(e);
+    }
+  };
+
+  const payHallBooking = async (id: number, _method: PaymentMethod): Promise<HallBooking> => {
+    try {
+      await hallBookingsApi.initiatePayment(id);
+      const hb = hallBookings.find((x) => x.id === id);
+      return hb ?? ({} as HallBooking);
+    } catch (e) {
+      throw extractError(e);
+    }
+  };
+
+  const cancelHallBooking = async (id: number): Promise<void> => {
+    try {
+      await hallBookingsApi.cancel(id);
+      setHallBookings((prev) =>
+        prev.map((hb) => (hb.id === id ? { ...hb, status: 'CANCELLED' } : hb))
+      );
+      const h = await publicApi.halls();
+      setHalls(h.map(hallFromDto));
+    } catch (e) {
+      throw extractError(e);
+    }
+  };
+
+  // ── meal orders ⚠ NOT BACKEND-SUPPORTED ───────────────────
+  // Your /v3/api-docs has no /api/meal-orders endpoints.
+  // These throw so the UI can't silently persist fake orders.
+  // When you add Spring Boot endpoints, replace the bodies below
+  // with `request<...>('/api/meal-orders', ...)` calls.
+  const createMealOrder = async (_data: {
+    mealId: number;
+    quantity: number;
+    serveAt: string;
+  }): Promise<MealOrder> => {
+    throw new Error(
+      'Meal ordering is not yet supported by the backend. Ask the backend team to add POST /api/meal-orders.'
     );
-    saveDb({ ...db, bookings: updated });
-    return updated.find((b) => b.id === id)!;
   };
 
-  const setBookingStatus = (id: number, status: BookingStatus) => {
-    const b = db.bookings.find((x) => x.id === id);
-    if (!b) throw new Error('Booking not found');
-    const giveBack = status === 'CANCELLED' && b.status !== 'CANCELLED';
-    saveDb({
-      ...db,
-      bookings: db.bookings.map((x) => (x.id === id ? { ...x, status } : x)),
-      rooms: giveBack
-        ? db.rooms.map((r) => (r.id === b.roomId ? { ...r, availableRooms: r.availableRooms + b.roomCount } : r))
-        : db.rooms,
-    });
+  const payMealOrder = async (_id: number, _method: PaymentMethod): Promise<MealOrder> => {
+    throw new Error('Meal ordering is not yet supported by the backend.');
   };
 
-  const cancelBooking = (id: number) => setBookingStatus(id, 'CANCELLED');
-  const updateBookingStatus = (id: number, status: BookingStatus) => setBookingStatus(id, status);
-
-  /* ---------------- hall bookings ---------------- */
-  const createHallBooking = ({ hallId, startTime, endTime, purpose, attendees, billingMode = 'HOURLY' }: { hallId: number; startTime: string; endTime: string; purpose: string; attendees: number; billingMode?: 'HOURLY' | 'DAILY' }) => {
-    if (!user) throw new Error('User not logged in');
-    const hall = db.halls.find((h) => h.id === hallId);
-    if (!hall) throw new Error('Hall not found');
-    if (!hall.available) throw new Error('Hall not available');
-
-    const hours = Math.max(1, (new Date(endTime).getTime() - new Date(startTime).getTime()) / 3600000);
-    const total =
-      billingMode === 'DAILY'
-        ? hall.pricePerDay ?? hall.pricePerHour * 24
-        : hall.pricePerHour * hours;
-
-    const newHallBooking: HallBooking = {
-      id: db.seq.hallBookings,
-      hallId,
-      hallName: hall.name,
-      customerUsername: user.username,
-      startTime,
-      endTime,
-      purpose,
-      attendees,
-      totalPrice: total,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      paid: false,
-      paymentReference: null,
-      paymentMethod: null,
-    };
-
-    saveDb({
-      ...db,
-      halls: db.halls.map((h) => (h.id === hallId ? { ...h, available: false } : h)),
-      hallBookings: [...db.hallBookings, newHallBooking],
-      seq: { ...db.seq, hallBookings: db.seq.hallBookings + 1 },
-    });
-    return newHallBooking;
+  const cancelMealOrder = async (_id: number): Promise<void> => {
+    throw new Error('Meal ordering is not yet supported by the backend.');
   };
 
-  const payHallBooking = (id: number, method: PaymentMethod): HallBooking => {
-    const updated: HallBooking[] = db.hallBookings.map((hb) =>
-      hb.id === id
-        ? { ...hb, paid: true, status: 'CONFIRMED' as BookingStatus, paymentMethod: method, paymentReference: 'PAY-' + Date.now() }
-        : hb
-    );
-    saveDb({ ...db, hallBookings: updated });
-    return updated.find((hb) => hb.id === id)!;
+  // ── feedback ──────────────────────────────────────────────
+  const createFeedback = async (data: {
+    bookingId?: number | null;
+    rating: number;
+    comment: string;
+  }): Promise<Feedback> => {
+    try {
+      const f = await feedbackApi.submit({
+        bookingId: data.bookingId ?? undefined,
+        rating: data.rating,
+        comment: data.comment,
+      });
+      const mapped = feedbackFromDto(f);
+      setFeedbackList((prev) => [...prev, mapped]);
+      return mapped;
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const setHallBookingStatus = (id: number, status: BookingStatus) => {
-    const hb = db.hallBookings.find((x) => x.id === id);
-    if (!hb) throw new Error('Booking not found');
-    const free = status === 'CANCELLED' && hb.status !== 'CANCELLED';
-    saveDb({
-      ...db,
-      hallBookings: db.hallBookings.map((x) => (x.id === id ? { ...x, status } : x)),
-      halls: free ? db.halls.map((h) => (h.id === hb.hallId ? { ...h, available: true } : h)) : db.halls,
-    });
+  // ── admin CRUD: rooms ────────────────────────────────────
+  const createRoom = async (
+    data: Omit<Room, 'id' | 'availableRooms'>
+  ): Promise<Room> => {
+    try {
+      const req: RoomRequest = {
+        name: data.name,
+        building: data.building,
+        description: data.description,
+        pricePerNight: data.pricePerNight,
+        totalRooms: data.totalRooms,
+        amenities: data.amenities,
+      };
+      const r = await adminApi.createRoom(req);
+      const mapped = roomFromDto(r);
+      setRooms((prev) => [...prev, mapped]);
+      return mapped;
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const cancelHallBooking = (id: number) => setHallBookingStatus(id, 'CANCELLED');
-  const updateHallBookingStatus = (id: number, status: BookingStatus) => setHallBookingStatus(id, status);
-
-  /* ---------------- meal orders ---------------- */
-  const createMealOrder = ({ mealId, quantity, serveAt }: { mealId: number; quantity: number; serveAt: string }) => {
-    if (!user) throw new Error('User not logged in');
-    const meal = db.meals.find((m) => m.id === mealId);
-    if (!meal) throw new Error('Meal not found');
-
-    const order: MealOrder = {
-      id: db.seq.mealOrders,
-      mealId,
-      mealName: meal.name,
-      customerUsername: user.username,
-      quantity,
-      serveAt,
-      totalPrice: meal.price * quantity,
-      status: 'PENDING',
-      createdAt: new Date().toISOString(),
-      paid: false,
-      paymentReference: null,
-      paymentMethod: null,
-    };
-
-    saveDb({
-      ...db,
-      mealOrders: [...db.mealOrders, order],
-      seq: { ...db.seq, mealOrders: db.seq.mealOrders + 1 },
-    });
-    return order;
+  const updateRoom = async (id: number, data: Partial<Room>): Promise<void> => {
+    try {
+      const req: RoomRequest = {
+        name: data.name ?? '',
+        building: data.building,
+        description: data.description,
+        pricePerNight: data.pricePerNight ?? 0,
+        totalRooms: data.totalRooms ?? 0,
+        amenities: data.amenities,
+      };
+      const r = await adminApi.updateRoom(id, req);
+      setRooms((prev) => prev.map((x) => (x.id === id ? roomFromDto(r) : x)));
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const payMealOrder = (id: number, method: PaymentMethod): MealOrder => {
-    const updated: MealOrder[] = db.mealOrders.map((o) =>
-      o.id === id
-        ? { ...o, paid: true, status: 'CONFIRMED' as BookingStatus, paymentMethod: method, paymentReference: 'PAY-' + Date.now() }
-        : o
-    );
-    saveDb({ ...db, mealOrders: updated });
-    return updated.find((o) => o.id === id)!;
+  const deleteRoom = async (id: number): Promise<void> => {
+    try {
+      await adminApi.deleteRoom(id);
+      setRooms((prev) => prev.filter((r) => r.id !== id));
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const updateMealOrderStatus = (id: number, status: BookingStatus) => {
-    saveDb({ ...db, mealOrders: db.mealOrders.map((o) => (o.id === id ? { ...o, status } : o)) });
+  // ── admin CRUD: meals ────────────────────────────────────
+  const createMeal = async (data: Omit<Meal, 'id'>): Promise<Meal> => {
+    try {
+      const req: MealRequest = {
+        name: data.name,
+        mealType: data.mealType,
+        description: data.description,
+        price: data.price,
+      };
+      const m = await adminApi.createMeal(req);
+      const mapped = mealFromDto(m);
+      setMeals((prev) => [...prev, mapped]);
+      return mapped;
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const cancelMealOrder = (id: number) => updateMealOrderStatus(id, 'CANCELLED');
-
-  /* ---------------- feedback ---------------- */
-  const createFeedback = ({ bookingId = null, rating, comment }: { bookingId?: number | null; rating: number; comment: string }) => {
-    if (!user) throw new Error('User not logged in');
-    const newFb: Feedback = {
-      id: db.seq.feedback,
-      customerUsername: user.username,
-      bookingId,
-      rating,
-      comment,
-      resolved: false,
-      createdAt: new Date().toISOString(),
-    };
-    saveDb({ ...db, feedback: [...db.feedback, newFb], seq: { ...db.seq, feedback: db.seq.feedback + 1 } });
-    return newFb;
+  const updateMeal = async (id: number, data: Partial<Meal>): Promise<void> => {
+    try {
+      const req: MealRequest = {
+        name: data.name ?? '',
+        mealType: data.mealType,
+        description: data.description,
+        price: data.price ?? 0,
+      };
+      const m = await adminApi.updateMeal(id, req);
+      setMeals((prev) => prev.map((x) => (x.id === id ? mealFromDto(m) : x)));
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const resolveFeedback = (id: number) => {
-    saveDb({ ...db, feedback: db.feedback.map((f) => (f.id === id ? { ...f, resolved: true } : f)) });
+  const deleteMeal = async (id: number): Promise<void> => {
+    try {
+      await adminApi.deleteMeal(id);
+      setMeals((prev) => prev.filter((m) => m.id !== id));
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  /* ---------------- admin: rooms, meals, halls ---------------- */
-  const createRoom = (data: Omit<Room, 'id' | 'availableRooms'>) => {
-    const r: Room = {
-      ...data,
-      id: db.seq.rooms,
-      availableRooms: data.totalRooms || 1,
-      primaryImage: data.primaryImage || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?w=900&q=80',
-    };
-    saveDb({ ...db, rooms: [...db.rooms, r], seq: { ...db.seq, rooms: db.seq.rooms + 1 } });
-    return r;
+  // ── admin CRUD: halls ────────────────────────────────────
+  const createHall = async (data: Omit<Hall, 'id' | 'available'>): Promise<Hall> => {
+    try {
+      const req: HallRequest = {
+        name: data.name,
+        building: data.building,
+        description: data.description,
+        capacity: data.capacity,
+        pricePerHour: data.pricePerHour,
+        pricePerDay: data.pricePerDay,
+      };
+      const h = await adminApi.createHall(req);
+      const mapped = hallFromDto(h);
+      setHalls((prev) => [...prev, mapped]);
+      return mapped;
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const updateRoom = (id: number, data: Partial<Room>) => {
-    saveDb({ ...db, rooms: db.rooms.map((r) => (r.id === id ? { ...r, ...data } : r)) });
+  const updateHall = async (id: number, data: Partial<Hall>): Promise<void> => {
+    try {
+      const req: HallRequest = {
+        name: data.name ?? '',
+        building: data.building,
+        description: data.description,
+        capacity: data.capacity ?? 0,
+        pricePerHour: data.pricePerHour ?? 0,
+        pricePerDay: data.pricePerDay,
+      };
+      const h = await adminApi.updateHall(id, req);
+      setHalls((prev) => prev.map((x) => (x.id === id ? hallFromDto(h) : x)));
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const deleteRoom = (id: number) => {
-    saveDb({ ...db, rooms: db.rooms.filter((r) => r.id !== id) });
+  const deleteHall = async (id: number): Promise<void> => {
+    try {
+      await adminApi.deleteHall(id);
+      setHalls((prev) => prev.filter((h) => h.id !== id));
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const createMeal = (data: Omit<Meal, 'id'>) => {
-    const m: Meal = {
-      ...data,
-      id: db.seq.meals,
-      primaryImage: data.primaryImage || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=900&q=80',
-    };
-    saveDb({ ...db, meals: [...db.meals, m], seq: { ...db.seq, meals: db.seq.meals + 1 } });
-    return m;
+  // ── admin: booking statuses + feedback ───────────────────
+  const updateBookingStatus = async (
+    id: number,
+    status: BookingStatusInput
+  ): Promise<void> => {
+    try {
+      const b = await adminApi.updateBookingStatus(id, status);
+      setBookings((prev) => prev.map((x) => (x.id === id ? bookingFromDto(b) : x)));
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const updateMeal = (id: number, data: Partial<Meal>) => {
-    saveDb({ ...db, meals: db.meals.map((m) => (m.id === id ? { ...m, ...data } : m)) });
+  const updateHallBookingStatus = async (
+    id: number,
+    status: BookingStatusInput
+  ): Promise<void> => {
+    try {
+      const hb = await adminApi.updateHallBookingStatus(id, status);
+      setHallBookings((prev) =>
+        prev.map((x) => (x.id === id ? hallBookingFromDto(hb) : x))
+      );
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  const deleteMeal = (id: number) => {
-    saveDb({ ...db, meals: db.meals.filter((m) => m.id !== id) });
+  const updateMealOrderStatus = async (
+    _id: number,
+    _status: BookingStatus
+  ): Promise<void> => {
+    throw new Error('Meal ordering is not yet supported by the backend.');
   };
 
-  const createHall = (data: Omit<Hall, 'id' | 'available'>) => {
-    const h: Hall = {
-      ...data,
-      id: db.seq.halls,
-      available: true,
-      primaryImage: data.primaryImage || 'https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=900&q=80',
-    };
-    saveDb({ ...db, halls: [...db.halls, h], seq: { ...db.seq, halls: db.seq.halls + 1 } });
-    return h;
-  };
-
-  const updateHall = (id: number, data: Partial<Hall>) => {
-    saveDb({ ...db, halls: db.halls.map((h) => (h.id === id ? { ...h, ...data } : h)) });
-  };
-
-  const deleteHall = (id: number) => {
-    saveDb({ ...db, halls: db.halls.filter((h) => h.id !== id) });
+  const resolveFeedback = async (id: number, resolved = true): Promise<void> => {
+    try {
+      const f = await adminApi.resolveFeedback(id, resolved);
+      setFeedbackList((prev) =>
+        prev.map((x) => (x.id === id ? feedbackFromDto(f) : x))
+      );
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
   return (
     <LodgeContext.Provider
       value={{
-        theme, toggleTheme, user, login, register, logout,
-        rooms: db.rooms, meals: db.meals, halls: db.halls,
-        bookings: db.bookings, hallBookings: db.hallBookings,
-        mealOrders: db.mealOrders, feedbackList: db.feedback,
-        createBooking, payBooking, cancelBooking,
-        createHallBooking, payHallBooking, cancelHallBooking,
-        createMealOrder, payMealOrder, cancelMealOrder,
-        createFeedback, createRoom, updateRoom, deleteRoom,
-        createMeal, updateMeal, deleteMeal, createHall, updateHall, deleteHall,
-        updateBookingStatus, updateHallBookingStatus, updateMealOrderStatus,
-        resolveFeedback, toastMessage, showToast,
+        theme,
+        toggleTheme,
+        toastMessage,
+        showToast,
+        user,
+        login,
+        register,
+        logout,
+        rooms,
+        meals,
+        halls,
+        bookings,
+        hallBookings,
+        mealOrders,
+        feedbackList,
+        loading,
+        refresh,
+        createBooking,
+        payBooking,
+        cancelBooking,
+        createHallBooking,
+        payHallBooking,
+        cancelHallBooking,
+        createMealOrder,
+        payMealOrder,
+        cancelMealOrder,
+        createFeedback,
+        createRoom,
+        updateRoom,
+        deleteRoom,
+        createMeal,
+        updateMeal,
+        deleteMeal,
+        createHall,
+        updateHall,
+        deleteHall,
+        updateBookingStatus,
+        updateHallBookingStatus,
+        updateMealOrderStatus,
+        resolveFeedback,
       }}
     >
       {children}
