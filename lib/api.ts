@@ -26,8 +26,21 @@ const USER_KEY = 'lodge_username';
 // Types (mirror your /v3/api-docs schemas)
 // ─────────────────────────────────────────────────────────────
 
-// CHANGED: added 'COMPLETED' so the UI can filter on it
+/**
+ * Statuses the UI may READ from the backend.
+ * 'COMPLETED' is allowed here purely for display/filtering — it is NOT
+ * returned by the current backend, and MUST NOT be sent back (see below).
+ */
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
+
+/**
+ * Statuses the backend's `status` enum actually accepts
+ * (per /v3/api-docs → PATCH /api/admin/{bookings,hall-bookings}/{id}/status
+ *  and the `status` query param on GET list endpoints).
+ * Use this type for anything that will be sent to the API.
+ */
+export type BookingStatusInput = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+
 export type PaymentMethod = 'CARD' | 'MOBILE_MONEY' | 'BANK_TRANSFER' | 'CASH';
 export type HallBillingMode = 'HOURLY' | 'DAILY';
 export type Role = 'ADMIN' | 'CUSTOMER';
@@ -48,7 +61,7 @@ export interface RoomDto {
   totalRooms: number;
   availableRooms: number;
   primaryImage?: string;
-  images?: string[]; // CHANGED: was required
+  images?: string[];
   amenities: string[];
 }
 
@@ -67,8 +80,8 @@ export interface MealDto {
   mealType?: MealType;
   description?: string;
   price: number;
-  primaryImage?: string; // CHANGED: added
-  images?: string[];     // CHANGED: was required
+  primaryImage?: string;
+  images?: string[];
 }
 
 export interface MealRequest {
@@ -88,7 +101,7 @@ export interface HallDto {
   pricePerDay?: number;
   available?: boolean;
   primaryImage?: string;
-  images?: string[]; // CHANGED: was required
+  images?: string[];
 }
 
 export interface HallRequest {
@@ -157,7 +170,7 @@ export interface PaymentInitiationResponse {
 export interface FeedbackDto {
   id: number;
   customerUsername: string;
-  bookingId?: number | null;   // ← ADDED
+  bookingId?: number | null;
   rating: number;
   comment?: string;
   resolved: boolean;
@@ -678,7 +691,7 @@ export const adminApi = {
 
   // Bookings
   listBookings(params?: {
-    status?: BookingStatus;
+    status?: BookingStatusInput;
     paid?: boolean;
     page?: number;
     size?: number;
@@ -696,7 +709,7 @@ export const adminApi = {
   },
   updateBookingStatus(
     id: number,
-    status: BookingStatus
+    status: BookingStatusInput
   ): Promise<BookingResponse> {
     return request<BookingResponse>(
       `/api/admin/bookings/${id}/status?status=${status}`,
@@ -707,7 +720,7 @@ export const adminApi = {
 
   // Hall bookings
   listHallBookings(params?: {
-    status?: BookingStatus;
+    status?: BookingStatusInput;
     paid?: boolean;
     page?: number;
     size?: number;
@@ -725,7 +738,7 @@ export const adminApi = {
   },
   updateHallBookingStatus(
     id: number,
-    status: BookingStatus
+    status: BookingStatusInput
   ): Promise<HallBookingResponse> {
     return request<HallBookingResponse>(
       `/api/admin/hall-bookings/${id}/status?status=${status}`,
