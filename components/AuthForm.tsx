@@ -3,11 +3,12 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { authApi, auth } from '@/lib/api';
+import { authApi } from '@/lib/api';
 
 export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const router = useRouter();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,11 +21,15 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
     try {
       if (!isLogin && password.length < 6)
         throw new Error('Password must be at least 6 characters');
+      if (!isLogin && !email.trim())
+        throw new Error('Email is required');
 
       const u = isLogin
         ? await authApi.login(username, password)
-        : await authApi.register(username, password);
+        : await authApi.register(username, password, email.trim());
 
+      // Optional but helpful: a small toast so it's obvious which role you got.
+      // Admin → /admin/dashboard, Customer → /.
       router.push(u.role === 'ADMIN' ? '/admin/dashboard' : '/');
     } catch (err) {
       setError((err as Error).message);
@@ -51,6 +56,25 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
             autoComplete="username"
           />
         </div>
+
+        {!isLogin && (
+          <div className="field">
+            <label>Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              placeholder="you@example.com"
+            />
+            <small className="text-xs text-[var(--muted)]">
+              Registering with an email containing &quot;admin&quot; creates an
+              admin account (demo).
+            </small>
+          </div>
+        )}
+
         <div className="field">
           <label>Password</label>
           <input
@@ -67,11 +91,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
           </p>
         )}
         <button className="btn btn-primary w-full" type="submit" disabled={loading}>
-          {loading
-            ? 'Please wait…'
-            : isLogin
-            ? 'Login'
-            : 'Create account'}
+          {loading ? 'Please wait…' : isLogin ? 'Login' : 'Create account'}
         </button>
       </form>
       <p className="mt-4 mb-0 text-sm text-[var(--muted)]">
