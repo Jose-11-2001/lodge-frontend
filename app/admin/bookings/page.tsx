@@ -7,6 +7,7 @@ import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import StatusBadge from '@/components/StatusBadge';
 import { money, dateOnly, dateTime } from '@/lib/format';
 import { BookingStatus, PaymentMethod } from '@/types';
+import type { BookingStatusInput } from '@/lib/api';
 
 type Tab = 'rooms' | 'halls' | 'meals';
 
