@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
@@ -11,24 +11,12 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const isLogin = mode === 'login';
-
-  // If we arrived from /register → /login?registered=1, show a friendly notice.
-  useEffect(() => {
-    if (!isLogin) return;
-    if (typeof window === 'undefined') return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('registered') === '1') {
-      setNotice('Account created — please log in.');
-    }
-  }, [isLogin]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    setNotice(null);
     setLoading(true);
     try {
       if (!isLogin && password.length < 6)
@@ -36,16 +24,13 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       if (!isLogin && !email.trim())
         throw new Error('Email is required');
 
-      if (isLogin) {
-        // Log in → redirect straight in
-        const u = await authApi.login(username, password);
-        router.push(u.role === 'ADMIN' ? '/admin/dashboard' : '/');
-      } else {
-        // Register → create the account, then force a fresh login
-        await authApi.register(username, password, email.trim());
-        authApi.logout();                       // clear the JWT that register returned
-        router.push('/login?registered=1');     // send to login page
-      }
+      // Both paths return { token, role, username }
+      const u = isLogin
+        ? await authApi.login(username, password)
+        : await authApi.register(username, password, email.trim());
+
+      // Backend decides the role based on email. Trust it.
+      router.push(u.role === 'ADMIN' ? '/admin/dashboard' : '/');
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -61,12 +46,6 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       <p className="m-0 mb-5 text-sm text-[var(--muted)]">
         {isLogin ? 'Log in to book rooms, halls and meals.' : 'It takes a few seconds.'}
       </p>
-
-      {notice && (
-        <p className="text-sm text-[#5bd39a] m-0 mb-3" role="status">
-          {notice}
-        </p>
-      )}
 
       <form onSubmit={submit}>
         <div className="field">
@@ -90,6 +69,10 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
               autoComplete="email"
               placeholder="you@example.com"
             />
+            <small className="text-xs text-[var(--muted)]">
+              Registering with an email containing &quot;admin&quot; creates an
+              admin account (demo).
+            </small>
           </div>
         )}
 
