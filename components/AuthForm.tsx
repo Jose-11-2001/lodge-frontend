@@ -14,6 +14,16 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const [loading, setLoading] = useState(false);
   const isLogin = mode === 'login';
 
+  const goBack = () => {
+    // If the user navigated here from a page inside the app, go back.
+    // Otherwise (fresh tab / bookmark), go to the homepage.
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/');
+    }
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -24,12 +34,10 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       if (!isLogin && !email.trim())
         throw new Error('Email is required');
 
-      // Both paths return { token, role, username }
       const u = isLogin
         ? await authApi.login(username, password)
         : await authApi.register(username, password, email.trim());
 
-      // Backend decides the role based on email. Trust it.
       router.push(u.role === 'ADMIN' ? '/admin/dashboard' : '/');
     } catch (err) {
       setError((err as Error).message);
@@ -40,6 +48,31 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
 
   return (
     <div className="max-w-[420px] mx-auto mt-10 bg-[var(--card)] border border-[var(--line-2)] rounded-[20px] p-7 shadow-[var(--shadow-md)]">
+      {/* Back arrow */}
+      <button
+        type="button"
+        onClick={goBack}
+        aria-label="Go back"
+        title="Go back"
+        className="inline-flex items-center gap-1.5 mb-4 -ml-1 px-2 py-1 rounded-lg text-sm font-medium text-[var(--muted)] hover:text-[var(--text)] hover:bg-[#f4f4f5] transition-colors cursor-pointer border-none bg-transparent"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="19" y1="12" x2="5" y2="12" />
+          <polyline points="12 19 5 12 12 5" />
+        </svg>
+        Back
+      </button>
+
       <h2 className="m-0 mb-1 font-fraunces font-bold text-[28px]">
         {isLogin ? 'Welcome back' : 'Create your account'}
       </h2>
@@ -69,7 +102,6 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
               autoComplete="email"
               placeholder="you@gmail.com"
             />
-            
           </div>
         )}
 
