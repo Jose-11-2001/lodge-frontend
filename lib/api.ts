@@ -768,7 +768,37 @@ export const adminApi = {
     );
   },
 };
+export interface SiteSettingsDto {
+  lodgeName: string;
+  logoUrl: string;
+}
 
+export const siteSettingsApi = {
+  /** Public — used by the header on every page. */
+  async read(): Promise<SiteSettingsDto> {
+    return request<SiteSettingsDto>('/api/public/site-settings');
+  },
+
+  /** Admin — update the lodge name. */
+  async updateName(lodgeName: string): Promise<SiteSettingsDto> {
+    return request<SiteSettingsDto>(
+      '/api/admin/site-settings/name',
+      { method: 'PUT', body: JSON.stringify({ lodgeName }) },
+      true
+    );
+  },
+
+  /** Admin — upload a new logo image. */
+  async uploadLogo(file: File): Promise<SiteSettingsDto> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return request<SiteSettingsDto>(
+      '/api/admin/site-settings/logo',
+      { method: 'POST', body: fd },
+      true
+    );
+  },
+};
 // ─────────────────────────────────────────────────────────────
 // Convenience: build absolute image URL
 // ─────────────────────────────────────────────────────────────
