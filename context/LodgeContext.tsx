@@ -1,5 +1,4 @@
 'use client';
-import { siteSettingsApi } from '@/lib/api';
 
 import React, {
   createContext,
@@ -29,6 +28,7 @@ import {
   hallBookingsApi,
   feedbackApi,
   adminApi,
+  siteSettingsApi,
   ApiError,
   RoomDto,
   MealDto,
@@ -44,15 +44,11 @@ import {
 import { USER_KEY, ROLE_KEY, hasSavedSession } from '@/lib/auth';
 
 // ─────────────────────────────────────────────────────────────
-// Context shape — SAME names as before, so components don't change.
-// The difference: every method now calls the Spring Boot backend
-// via api.ts instead of mutating localStorage.
+// Context shape
 // ─────────────────────────────────────────────────────────────
 
 interface LodgeContextType {
   // ui
-  theme: string;
-  toggleTheme: () => void;
   toastMessage: { msg: string; err?: boolean } | null;
   showToast: (msg: string, err?: boolean) => void;
 
@@ -62,7 +58,7 @@ interface LodgeContextType {
   register: (credentials: { username: string; password: string }) => Promise<User>;
   logout: () => void;
 
-  // data (read-only caches loaded from backend)
+  // data
   rooms: Room[];
   meals: Meal[];
   halls: Hall[];
@@ -72,6 +68,13 @@ interface LodgeContextType {
   feedbackList: Feedback[];
   loading: boolean;
   refresh: () => Promise<void>;
+
+  // site settings (lodge name + logo)
+  lodgeName: string;
+  logoUrl: string | null;
+  refreshSiteSettings: () => Promise<void>;
+  updateLodgeName: (name: string) => Promise<void>;
+  uploadLogo: (file: File) => Promise<void>;
 
   // customer actions
   createBooking: (data: {
@@ -94,7 +97,6 @@ interface LodgeContextType {
   payHallBooking: (id: number, method: PaymentMethod) => Promise<HallBooking>;
   cancelHallBooking: (id: number) => Promise<void>;
 
-  // ⚠ Not supported by the backend yet — see TODO inside implementation.
   createMealOrder: (data: {
     mealId: number;
     quantity: number;
@@ -131,9 +133,7 @@ interface LodgeContextType {
 const LodgeContext = createContext<LodgeContextType | undefined>(undefined);
 
 // ─────────────────────────────────────────────────────────────
-// Helpers: map backend DTOs → frontend model types
-// Normalize optional fields so the frontend model's stricter
-// shapes (e.g. paymentReference: string | null) are satisfied.
+// DTO → model mappers
 // ─────────────────────────────────────────────────────────────
 
 const roomFromDto = (r: RoomDto): Room => ({
@@ -185,7 +185,6 @@ const extractError = (e: unknown): Error => {
 
 export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // ui
-  const [theme, setThemeState] = useState<string>('dark');
   const [toastMessage, setToastMessage] = useState<{ msg: string; err?: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -199,29 +198,18 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [hallBookings, setHallBookings] = useState<HallBooking[]>([]);
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
-  // Meal orders aren't in the backend yet — keep empty.
   const [mealOrders] = useState<MealOrder[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+
+  // site settings (lodge name + logo)
+  const [lodgeName, setLodgeName] = useState<string>('LodgeApp');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string, err = false) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     setToastMessage({ msg, err });
     toastTimer.current = setTimeout(() => setToastMessage(null), 3000);
   }, []);
-
-  // ── theme (local only) ─────────────────────────────────────
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('lodge_theme') || 'dark';
-    setThemeState(savedTheme);
-    document.documentElement.setAttribute('data-theme', savedTheme);
-  }, []);
-
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setThemeState(next);
-    localStorage.setItem('lodge_theme', next);
-    document.documentElement.setAttribute('data-theme', next);
-  };
 
   // ── session hydration ─────────────────────────────────────
   useEffect(() => {
@@ -232,6 +220,32 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setUser({ id: 0, username: storedUser, role: storedRole as User['role'] });
     }
   }, []);
+
+  // ── site settings ─────────────────────────────────────────
+  const refreshSiteSettings = useCallback(async () => {
+    try {
+      const s = await siteSettingsApi.read();
+      setLodgeName(s.lodgeName || 'LodgeApp');
+      setLogoUrl(s.logoUrl || null);
+    } catch {
+      /* keep defaults on failure */
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshSiteSettings();
+  }, [refreshSiteSettings]);
+
+  const updateLodgeName = async (name: string) => {
+    const s = await siteSettingsApi.updateName(name);
+    setLodgeName(s.lodgeName);
+  };
+
+  const uploadLogo = async (file: File) => {
+    const s = await siteSettingsApi.uploadLogo(file);
+    setLogoUrl(s.logoUrl || null);
+    setLodgeName(s.lodgeName || 'LodgeApp');
+  };
 
   // ── data loading ──────────────────────────────────────────
   const refresh = useCallback(async () => {
@@ -406,7 +420,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── meal orders ⚠ NOT BACKEND-SUPPORTED ───────────────────
+  // ── meal orders (not backend-supported yet) ───────────────
   const createMealOrder = async (_data: {
     mealId: number;
     quantity: number;
@@ -445,7 +459,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── admin CRUD: rooms ────────────────────────────────────
+  // ── admin: rooms ─────────────────────────────────────────
   const createRoom = async (
     data: Omit<Room, 'id' | 'availableRooms'>
   ): Promise<Room> => {
@@ -493,7 +507,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── admin CRUD: meals ────────────────────────────────────
+  // ── admin: meals ─────────────────────────────────────────
   const createMeal = async (data: Omit<Meal, 'id'>): Promise<Meal> => {
     try {
       const req: MealRequest = {
@@ -535,7 +549,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── admin CRUD: halls ────────────────────────────────────
+  // ── admin: halls ─────────────────────────────────────────
   const createHall = async (data: Omit<Hall, 'id' | 'available'>): Promise<Hall> => {
     try {
       const req: HallRequest = {
@@ -580,12 +594,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw extractError(e);
     }
   };
-// site settings
-lodgeName: string;
-logoUrl: string | null;
-refreshSiteSettings: () => Promise<void>;
-updateLodgeName: (name: string) => Promise<void>;
-uploadLogo: (file: File) => Promise<void>;
+
   // ── admin: booking statuses + feedback ───────────────────
   const updateBookingStatus = async (
     id: number,
@@ -634,8 +643,6 @@ uploadLogo: (file: File) => Promise<void>;
   return (
     <LodgeContext.Provider
       value={{
-        theme,
-        toggleTheme,
         toastMessage,
         showToast,
         user,
@@ -651,6 +658,14 @@ uploadLogo: (file: File) => Promise<void>;
         feedbackList,
         loading,
         refresh,
+
+        // site settings
+        lodgeName,
+        logoUrl,
+        refreshSiteSettings,
+        updateLodgeName,
+        uploadLogo,
+
         createBooking,
         payBooking,
         cancelBooking,
