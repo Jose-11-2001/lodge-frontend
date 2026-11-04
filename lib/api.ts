@@ -289,11 +289,13 @@ async function request<T>(
 
   if (res.status === 401 || res.status === 403) {
     auth.logout();
+    // App Router: the login page is /login, NOT /login.html.
+    // The old .html path 404'd and looked like a routing bug.
     if (
       typeof window !== 'undefined' &&
-      !window.location.pathname.includes('login')
+      !window.location.pathname.startsWith('/login')
     ) {
-      window.location.href = `/login.html?next=${encodeURIComponent(
+      window.location.href = `/login?next=${encodeURIComponent(
         window.location.pathname
       )}`;
     }
@@ -768,6 +770,11 @@ export const adminApi = {
     );
   },
 };
+
+// ─────────────────────────────────────────────────────────────
+// Site settings (lodge name + logo)
+// ─────────────────────────────────────────────────────────────
+
 export interface SiteSettingsDto {
   lodgeName: string;
   logoUrl: string;
@@ -799,6 +806,7 @@ export const siteSettingsApi = {
     );
   },
 };
+
 // ─────────────────────────────────────────────────────────────
 // Convenience: build absolute image URL
 // ─────────────────────────────────────────────────────────────
