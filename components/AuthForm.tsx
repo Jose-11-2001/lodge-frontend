@@ -67,7 +67,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder="you@gmail.com"
             />
             <small className="text-xs text-[var(--muted)]">
               Registering with an email containing &quot;admin&quot; creates an
