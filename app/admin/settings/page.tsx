@@ -7,7 +7,7 @@ import { API_BASE } from '@/lib/api';
 
 export default function AdminSettingsPage() {
   const admin = useRequireAdmin();
-  const { lodgeName, logoUrl, updateLodgeName, uploadLogo, showToast } = useLodge();
+  const { initializing, lodgeName, logoUrl, updateLodgeName, uploadLogo, showToast } = useLodge();
 
   const [nameInput, setNameInput] = useState(lodgeName);
   const [savingName, setSavingName] = useState(false);
@@ -17,7 +17,8 @@ export default function AdminSettingsPage() {
     setNameInput(lodgeName);
   }, [lodgeName]);
 
-  if (!admin) return null;
+  if (initializing) return <div className="p-10 text-[var(--muted)]">Loading…</div>;
+  if (!admin) return <div className="p-10 text-[var(--muted)]">Redirecting to login…</div>;
 
   const logoSrc = logoUrl
     ? logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`
