@@ -13,20 +13,20 @@ interface NavItem {
 
 export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  // const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const pathname = usePathname();
   const router = useRouter();
 
   const role = auth.role();
   const username = auth.username();
 
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setTheme(next);
-    if (typeof document !== 'undefined') {
-      document.documentElement.dataset.theme = next;
-    }
-  };
+  // const toggleTheme = () => {
+  //   const next = theme === 'light' ? 'dark' : 'light';
+  //   setTheme(next);
+  //   if (typeof document !== 'undefined') {
+  //     document.documentElement.dataset.theme = next;
+  //   }
+  // };
 
   const getNavItems = (): NavItem[] => {
     if (!auth.isLoggedIn()) {
@@ -107,6 +107,8 @@ export default function Header() {
             );
           })}
 
+          {/* Theme toggle — disabled (white-only theme) */}
+          {/*
           <button
             onClick={toggleTheme}
             className="w-[38px] h-[38px] shrink-0 rounded-full flex items-center justify-center border border-[var(--line-2)] bg-[rgba(120,150,220,0.06)] text-[13px] font-semibold cursor-pointer hover:border-[var(--accent)] transition-all"
@@ -115,6 +117,7 @@ export default function Header() {
           >
             {theme === 'light' ? 'Dark' : 'Light'}
           </button>
+          */}
 
           {auth.isLoggedIn() && (
             <>
@@ -182,6 +185,9 @@ export default function Header() {
               {item.label}
             </Link>
           ))}
+
+          {/* Theme toggle in drawer — disabled (white-only theme) */}
+          {/*
           <button
             onClick={() => {
               toggleTheme();
@@ -191,6 +197,8 @@ export default function Header() {
           >
             {theme === 'light' ? 'Dark mode' : 'Light mode'}
           </button>
+          */}
+
           {auth.isLoggedIn() && (
             <button onClick={handleLogout} className={drawerBtn}>
               Logout
