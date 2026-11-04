@@ -17,9 +17,7 @@ export function useRequireAdmin() {
       }
       return;
     }
-
-    // No user yet. If a token exists in localStorage, the context is still
-    // hydrating — wait. Only redirect when there is truly no session.
+    // No user yet. Only redirect when there is truly no session.
     if (!hasSavedSession()) {
       showToast('Please log in as admin', true);
       router.push('/login');

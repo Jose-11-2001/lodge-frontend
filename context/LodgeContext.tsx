@@ -54,6 +54,7 @@ interface LodgeContextType {
 
   // auth
   user: User | null;
+  initializing: boolean;
   login: (credentials: { username: string; password: string }) => Promise<User>;
   register: (credentials: { username: string; password: string }) => Promise<User>;
   logout: () => void;
@@ -69,7 +70,7 @@ interface LodgeContextType {
   loading: boolean;
   refresh: () => Promise<void>;
 
-  // site settings (lodge name + logo)
+  // site settings
   lodgeName: string;
   logoUrl: string | null;
   refreshSiteSettings: () => Promise<void>;
@@ -190,6 +191,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // session
   const [user, setUser] = useState<User | null>(null);
+  const [initializing, setInitializing] = useState<boolean>(true);
 
   // backend-backed caches
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -201,7 +203,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [mealOrders] = useState<MealOrder[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
-  // site settings (lodge name + logo)
+  // site settings
   const [lodgeName, setLodgeName] = useState<string>('LodgeApp');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
@@ -213,11 +215,15 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // ── session hydration ─────────────────────────────────────
   useEffect(() => {
-    if (!hasSavedSession()) return;
-    const storedUser = localStorage.getItem(USER_KEY);
-    const storedRole = localStorage.getItem(ROLE_KEY);
-    if (storedUser && storedRole) {
-      setUser({ id: 0, username: storedUser, role: storedRole as User['role'] });
+    try {
+      if (!hasSavedSession()) return;
+      const storedUser = localStorage.getItem(USER_KEY);
+      const storedRole = localStorage.getItem(ROLE_KEY);
+      if (storedUser && storedRole) {
+        setUser({ id: 0, username: storedUser, role: storedRole as User['role'] });
+      }
+    } finally {
+      setInitializing(false);
     }
   }, []);
 
@@ -228,7 +234,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setLodgeName(s.lodgeName || 'LodgeApp');
       setLogoUrl(s.logoUrl || null);
     } catch {
-      /* keep defaults on failure */
+      /* keep defaults */
     }
   }, []);
 
@@ -646,6 +652,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         toastMessage,
         showToast,
         user,
+        initializing,
         login,
         register,
         logout,
@@ -659,7 +666,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         loading,
         refresh,
 
-        // site settings
         lodgeName,
         logoUrl,
         refreshSiteSettings,
