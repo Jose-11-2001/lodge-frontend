@@ -7,10 +7,10 @@ import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import { money } from '@/lib/format';
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#6ea8ff',
-  CONFIRMED: '#22d3a8',
-  CANCELLED: '#a78bfa',
-  COMPLETED: '#ffb547',
+  PENDING: '#111827',
+  CONFIRMED: '#111827',
+  CANCELLED: '#111827',
+  COMPLETED: '#111827',
 };
 
 const dayKey = (d: Date) =>
@@ -18,11 +18,26 @@ const dayKey = (d: Date) =>
 
 export default function AdminDashboardPage() {
   const admin = useRequireAdmin();
-  const { rooms, meals, halls, bookings, hallBookings, mealOrders, feedbackList } = useLodge();
+  const {
+    initializing,
+    rooms,
+    meals,
+    halls,
+    bookings,
+    hallBookings,
+    mealOrders,
+    feedbackList,
+  } = useLodge();
 
-  if (!admin) return null;
+  // Loading gate — provider hasn't hydrated from localStorage yet
+  if (initializing) {
+    return <div className="p-10 text-[var(--muted)]">Loading…</div>;
+  }
+  // Auth gate — provider hydrated, but no admin session
+  if (!admin) {
+    return <div className="p-10 text-[var(--muted)]">Redirecting to login…</div>;
+  }
 
-  /* ---- stat cards ---- */
   const openFeedback = feedbackList.filter((f) => !f.resolved).length;
   const stats = [
     { n: rooms.length, l: 'Rooms' },
@@ -34,7 +49,6 @@ export default function AdminDashboardPage() {
     { n: openFeedback, l: 'Open feedback' },
   ];
 
-  /* ---- real revenue for the last 7 days (paid items only) ---- */
   const paid = [
     ...bookings.filter((b) => b.paid).map((b) => ({ at: b.createdAt, amount: b.totalAmount })),
     ...hallBookings.filter((h) => h.paid).map((h) => ({ at: h.createdAt, amount: h.totalPrice })),
@@ -52,7 +66,6 @@ export default function AdminDashboardPage() {
   const maxRevenue = Math.max(...revenue, 1);
   const weekTotal = revenue.reduce((a, b) => a + b, 0);
 
-  /* ---- donut: all bookings by status ---- */
   const allStatuses = [...bookings, ...hallBookings, ...mealOrders].map((x) => x.status);
   const total = allStatuses.length;
   const counts = Object.keys(STATUS_COLORS).map((s) => ({
@@ -70,7 +83,8 @@ export default function AdminDashboardPage() {
     })
     .join(', ');
 
-  const card = 'bg-[var(--card)] border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow-sm)]';
+  const card =
+    'bg-[var(--card)] border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow-sm)]';
 
   const tiles = [
     { label: '🏨 Rooms', href: '/admin/rooms' },
@@ -85,29 +99,41 @@ export default function AdminDashboardPage() {
       <h2 className="m-0 font-fraunces font-bold text-[34px] tracking-tight">Dashboard</h2>
       <p className="mt-1 mb-6 text-sm text-[var(--muted)]">Everything at a glance.</p>
 
-      {/* Stat cards */}
       <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(170px,1fr))] mb-7">
         {stats.map((s) => (
-          <div key={s.l} className={`${card} p-5 transition-all hover:-translate-y-[3px] hover:border-[var(--line-2)]`}>
-            <div className="font-fraunces font-bold text-[34px] leading-none bg-[image:var(--grad-2)] bg-clip-text text-transparent">
+          <div
+            key={s.l}
+            className={`${card} p-5 transition-all hover:-translate-y-[3px] hover:border-[var(--line-2)]`}
+          >
+            <div className="font-fraunces font-bold text-[34px] leading-none text-[var(--text)]">
               {s.n}
             </div>
-            <div className="mt-2 text-xs font-bold uppercase tracking-[0.5px] text-[var(--muted)]">{s.l}</div>
+            <div className="mt-2 text-xs font-bold uppercase tracking-[0.5px] text-[var(--muted)]">
+              {s.l}
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Charts */}
       <div className="grid gap-[22px] grid-cols-1 md:grid-cols-2 mb-7">
         <div className={`${card} p-6`}>
           <h3 className="m-0 mb-1 font-fraunces font-bold text-lg">Weekly revenue</h3>
-          <div className="text-xs text-[var(--muted)] mb-5">Paid bookings and orders · {money(weekTotal)} in the last 7 days</div>
+          <div className="text-xs text-[var(--muted)] mb-5">
+            Paid bookings and orders · {money(weekTotal)} in the last 7 days
+          </div>
           <div className="flex items-end gap-2.5 h-[140px]">
             {revenue.map((v, i) => (
-              <div key={i} className="flex-1 h-full flex items-end" title={`${days[i].toLocaleDateString('en-GB', { weekday: 'short' })} · ${money(v)}`}>
+              <div
+                key={i}
+                className="flex-1 h-full flex items-end"
+                title={`${days[i].toLocaleDateString('en-GB', { weekday: 'short' })} · ${money(v)}`}
+              >
                 <div
-                  className="w-full rounded-t-lg bg-[image:var(--grad-2)] transition-all"
-                  style={{ height: `${Math.max((v / maxRevenue) * 100, v > 0 ? 6 : 2)}%`, opacity: v > 0 ? 1 : 0.25 }}
+                  className="w-full rounded-t-lg bg-[#111827] transition-all"
+                  style={{
+                    height: `${Math.max((v / maxRevenue) * 100, v > 0 ? 6 : 2)}%`,
+                    opacity: v > 0 ? 1 : 0.15,
+                  }}
                 />
               </div>
             ))}
@@ -123,11 +149,17 @@ export default function AdminDashboardPage() {
 
         <div className={`${card} p-6`}>
           <h3 className="m-0 mb-1 font-fraunces font-bold text-lg">Bookings by status</h3>
-          <div className="text-xs text-[var(--muted)] mb-5">Rooms, halls and meals · {total} total</div>
+          <div className="text-xs text-[var(--muted)] mb-5">
+            Rooms, halls and meals · {total} total
+          </div>
           <div className="flex items-center gap-6 flex-wrap">
             <div
               className="w-[140px] h-[140px] rounded-full grid place-items-center shrink-0"
-              style={{ background: total ? `conic-gradient(${segments})` : 'var(--line-2)' }}
+              style={{
+                background: total
+                  ? `conic-gradient(${segments})`
+                  : 'var(--line-2)',
+              }}
             >
               <div className="w-[90px] h-[90px] rounded-full bg-[var(--bg)] flex flex-col items-center justify-center">
                 <b className="font-fraunces text-[26px] leading-none">{total}</b>
@@ -137,8 +169,9 @@ export default function AdminDashboardPage() {
             <div className="flex flex-col gap-2 text-sm">
               {counts.map((c) => (
                 <div key={c.name} className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-[4px]" style={{ background: c.color }} />
-                  {c.name.charAt(0) + c.name.slice(1).toLowerCase()} · {total ? Math.round((c.count / total) * 100) : 0}%
+                  <span className="w-3 h-3 rounded-[4px] bg-[#111827]" />
+                  {c.name.charAt(0) + c.name.slice(1).toLowerCase()} ·{' '}
+                  {total ? Math.round((c.count / total) * 100) : 0}%
                 </div>
               ))}
             </div>
@@ -146,7 +179,6 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Shortcuts */}
       <div className="flex gap-2.5 flex-wrap">
         {tiles.map((t) => (
           <Link key={t.href} href={t.href} className="btn btn-ghost no-underline">
