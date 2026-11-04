@@ -25,12 +25,14 @@ interface Row {
 export default function AdminBookingsPage() {
   const admin = useRequireAdmin();
   const {
+    initializing,
     bookings, hallBookings,
     updateBookingStatus, updateHallBookingStatus, showToast,
   } = useLodge();
   const [tab, setTab] = useState<Tab>('rooms');
 
-  if (!admin) return null;
+  if (initializing) return <div className="p-10 text-[var(--muted)]">Loading…</div>;
+  if (!admin) return <div className="p-10 text-[var(--muted)]">Redirecting to login…</div>;
 
   const data: Record<Tab, {
     rows: Row[];
@@ -106,8 +108,8 @@ export default function AdminBookingsPage() {
             onClick={() => setTab(t.key)}
             className={`px-4 py-2 rounded-full cursor-pointer border text-sm font-semibold transition-all ${
               tab === t.key
-                ? 'bg-[image:var(--grad-1)] text-[#06142b] border-transparent shadow-[var(--shadow-glow)]'
-                : 'bg-[rgba(120,150,220,0.06)] border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)]'
+                ? 'bg-[#111827] text-white border-transparent'
+                : 'bg-white border-[var(--line)] text-[var(--muted)] hover:text-[var(--text)]'
             }`}
           >
             {t.label}
