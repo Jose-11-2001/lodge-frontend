@@ -8,9 +8,10 @@ import { dateOnly } from '@/lib/format';
 
 export default function AdminFeedbackPage() {
   const admin = useRequireAdmin();
-  const { feedbackList, resolveFeedback, showToast } = useLodge();
+  const { initializing, feedbackList, resolveFeedback, showToast } = useLodge();
 
-  if (!admin) return null;
+  if (initializing) return <div className="p-10 text-[var(--muted)]">Loading…</div>;
+  if (!admin) return <div className="p-10 text-[var(--muted)]">Redirecting to login…</div>;
 
   const list = [...feedbackList].reverse();
   const open = feedbackList.filter((f) => !f.resolved).length;
