@@ -1,4 +1,5 @@
 'use client';
+import { siteSettingsApi } from '@/lib/api';
 
 import React, {
   createContext,
