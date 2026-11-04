@@ -69,10 +69,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
               autoComplete="email"
               placeholder="you@gmail.com"
             />
-            <small className="text-xs text-[var(--muted)]">
-              Registering with an email containing &quot;admin&quot; creates an
-              admin account (demo).
-            </small>
+            
           </div>
         )}
 
