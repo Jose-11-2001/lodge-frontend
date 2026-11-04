@@ -2,12 +2,17 @@
 
 import React from 'react';
 import { useLodge } from '@/context/LodgeContext';
+import { useRequireAdmin } from '@/lib/useRequireAdmin';
 import CrudManager from '@/components/CrudManager';
 import { money } from '@/lib/format';
 import { Meal } from '@/types';
 
 export default function AdminMealsPage() {
-  const { meals, createMeal, updateMeal, deleteMeal, showToast } = useLodge();
+  const admin = useRequireAdmin();
+  const { initializing, meals, createMeal, updateMeal, deleteMeal, showToast } = useLodge();
+
+  if (initializing) return <div className="p-10 text-[var(--muted)]">Loading…</div>;
+  if (!admin) return <div className="p-10 text-[var(--muted)]">Redirecting to login…</div>;
 
   return (
     <CrudManager<Meal>
