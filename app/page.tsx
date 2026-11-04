@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useLodge } from '@/context/LodgeContext';
 import Card from '@/components/Card';
 
-export default function HomePage() {
+export default function Page() {
   const { rooms, meals, halls, user } = useLodge();
   const router = useRouter();
 
