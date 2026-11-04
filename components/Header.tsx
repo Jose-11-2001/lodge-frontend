@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { auth, authApi } from '@/lib/api';
+import { auth, authApi, API_BASE } from '@/lib/api';
+import { useLodge } from '@/context/LodgeContext';
 
 interface NavItem {
   label: string;
@@ -13,20 +14,16 @@ interface NavItem {
 
 export default function Header() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const pathname = usePathname();
   const router = useRouter();
+  const { lodgeName, logoUrl } = useLodge();
 
   const role = auth.role();
   const username = auth.username();
 
-  // const toggleTheme = () => {
-  //   const next = theme === 'light' ? 'dark' : 'light';
-  //   setTheme(next);
-  //   if (typeof document !== 'undefined') {
-  //     document.documentElement.dataset.theme = next;
-  //   }
-  // };
+  const logoSrc = logoUrl
+    ? (logoUrl.startsWith('http') ? logoUrl : `${API_BASE}${logoUrl}`)
+    : null;
 
   const getNavItems = (): NavItem[] => {
     if (!auth.isLoggedIn()) {
@@ -46,6 +43,7 @@ export default function Header() {
         { label: 'Halls', href: '/admin/halls' },
         { label: 'Bookings', href: '/admin/bookings' },
         { label: 'Feedback', href: '/admin/feedback' },
+        { label: 'Settings', href: '/admin/settings' },
       ];
     }
     return [
@@ -72,17 +70,22 @@ export default function Header() {
 
   return (
     <>
-      <header className="flex flex-row items-center justify-between gap-4 px-4 sm:px-7 py-3.5 bg-[var(--panel)] backdrop-blur-md border-b border-[var(--line)] sticky top-0 z-20 transition-colors">
+      <header className="flex flex-row items-center justify-between gap-4 px-4 sm:px-7 py-3.5 bg-[var(--panel)] backdrop-blur-md border-b border-[var(--line)] sticky top-0 z-20">
         <Link
           className="flex items-center gap-2.5 shrink-0 cursor-pointer no-underline text-inherit"
           href="/"
         >
-          <div className="w-9 h-9 rounded-[11px] bg-[image:var(--grad-1)] flex items-center justify-center text-[19px] shadow-[var(--shadow-glow)]" />
+          {logoSrc ? (
+            <img
+              src={logoSrc}
+              alt={`${lodgeName} logo`}
+              className="w-9 h-9 rounded-[11px] object-cover border border-[var(--line)]"
+            />
+          ) : (
+            <div className="w-9 h-9 rounded-[11px] bg-[#111827] flex items-center justify-center text-[19px]" />
+          )}
           <h1 className="m-0 flex items-center font-fraunces font-bold text-[20px] tracking-[0.3px] whitespace-nowrap">
-            Lodge
-            <em className="not-italic bg-[image:var(--grad-1)] bg-[length:200%_100%] bg-clip-text text-transparent">
-              App
-            </em>
+            {lodgeName}
           </h1>
         </Link>
 
@@ -91,14 +94,11 @@ export default function Header() {
             let cls =
               'px-4 py-[9px] rounded-full text-sm font-medium transition-all no-underline cursor-pointer whitespace-nowrap ';
             if (item.primary) {
-              cls +=
-                'bg-[image:var(--grad-2)] text-[#052018] font-semibold shadow-[0_8px_24px_rgba(34,211,168,0.25)]';
+              cls += 'bg-[#111827] text-white font-semibold';
             } else if (isActive(item.href)) {
-              cls +=
-                'text-[#06142b] bg-[image:var(--grad-1)] font-semibold shadow-[var(--shadow-glow)]';
+              cls += 'text-white bg-[#111827] font-semibold';
             } else {
-              cls +=
-                'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[rgba(120,150,220,0.08)]';
+              cls += 'text-[var(--muted)] hover:text-[var(--text)] hover:bg-[#f4f4f5]';
             }
             return (
               <Link key={item.href} href={item.href} className={cls}>
@@ -107,23 +107,11 @@ export default function Header() {
             );
           })}
 
-          {/* Theme toggle — disabled (white-only theme) */}
-          {/*
-          <button
-            onClick={toggleTheme}
-            className="w-[38px] h-[38px] shrink-0 rounded-full flex items-center justify-center border border-[var(--line-2)] bg-[rgba(120,150,220,0.06)] text-[13px] font-semibold cursor-pointer hover:border-[var(--accent)] transition-all"
-            title="Toggle theme"
-            aria-label="Toggle theme"
-          >
-            {theme === 'light' ? 'Dark' : 'Light'}
-          </button>
-          */}
-
           {auth.isLoggedIn() && (
             <>
-              <div className="inline-flex items-center gap-2 py-[5px] pl-1 lg:pl-3.5 pr-[5px] rounded-full border border-[var(--line-2)] bg-[rgba(120,150,220,0.06)] text-[13px] text-[var(--text)] ml-1">
+              <div className="inline-flex items-center gap-2 py-[5px] pl-1 lg:pl-3.5 pr-[5px] rounded-full border border-[var(--line-2)] bg-white text-[13px] text-[var(--text)] ml-1">
                 <span className="hidden lg:inline">{username}</span>
-                <div className="w-7 h-7 rounded-full bg-[image:var(--grad-1)] flex items-center justify-center text-xs font-bold text-[#06142b]">
+                <div className="w-7 h-7 rounded-full bg-[#111827] flex items-center justify-center text-xs font-bold text-white">
                   {username?.[0]?.toUpperCase() ?? '?'}
                 </div>
               </div>
@@ -148,7 +136,7 @@ export default function Header() {
 
       {drawerOpen && (
         <div
-          className="fixed inset-0 bg-[rgba(2,6,20,0.6)] backdrop-blur-sm z-40 min-[821px]:hidden"
+          className="fixed inset-0 bg-[rgba(0,0,0,0.4)] z-40 min-[821px]:hidden"
           onClick={() => setDrawerOpen(false)}
         />
       )}
@@ -177,28 +165,12 @@ export default function Header() {
               href={item.href}
               onClick={() => setDrawerOpen(false)}
               className={`${drawerBtn} ${
-                isActive(item.href)
-                  ? 'bg-[rgba(120,150,220,0.14)] font-semibold'
-                  : ''
+                isActive(item.href) ? 'bg-[#f4f4f5] font-semibold' : ''
               }`}
             >
               {item.label}
             </Link>
           ))}
-
-          {/* Theme toggle in drawer — disabled (white-only theme) */}
-          {/*
-          <button
-            onClick={() => {
-              toggleTheme();
-              setDrawerOpen(false);
-            }}
-            className={drawerBtn}
-          >
-            {theme === 'light' ? 'Dark mode' : 'Light mode'}
-          </button>
-          */}
-
           {auth.isLoggedIn() && (
             <button onClick={handleLogout} className={drawerBtn}>
               Logout
