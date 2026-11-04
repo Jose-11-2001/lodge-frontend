@@ -579,7 +579,12 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       throw extractError(e);
     }
   };
-
+// site settings
+lodgeName: string;
+logoUrl: string | null;
+refreshSiteSettings: () => Promise<void>;
+updateLodgeName: (name: string) => Promise<void>;
+uploadLogo: (file: File) => Promise<void>;
   // ── admin: booking statuses + feedback ───────────────────
   const updateBookingStatus = async (
     id: number,
