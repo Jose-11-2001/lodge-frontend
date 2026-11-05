@@ -35,13 +35,33 @@ export default function AdminMealsPage() {
         { label: 'Price', render: (m) => money(m.price) },
         { label: 'Description', render: (m) => m.description },
       ]}
-      onCreate={(v) => {
-        createMeal(v as unknown as Omit<Meal, 'id'>);
+      onCreate={async (v) => {
+        try {
+          await createMeal(v as unknown as Omit<Meal, 'id'>);
+          showToast('Meal added');
+        } catch (err) {
+          showToast((err as Error).message, true);
+          throw err;
+        }
       }}
-      onUpdate={(meal, v) => {
-        updateMeal(meal.id, v as Partial<Meal>);
+      onUpdate={async (meal, v) => {
+        try {
+          await updateMeal(meal.id, v as Partial<Meal>);
+          showToast('Meal updated');
+        } catch (err) {
+          showToast((err as Error).message, true);
+          throw err;
+        }
       }}
-      onDelete={deleteMeal}
+      onDelete={async (id) => {
+        try {
+          await deleteMeal(id);
+          showToast('Meal deleted');
+        } catch (err) {
+          showToast((err as Error).message, true);
+          throw err;
+        }
+      }}
     />
   );
 }
