@@ -39,13 +39,33 @@ export default function AdminHallsPage() {
         { label: 'Per day', render: (h) => money(h.pricePerDay) },
         { label: 'Status', render: (h) => <span className={`badge ${h.available ? 'ok' : 'bad'}`}>{h.available ? 'Available' : 'Booked'}</span> },
       ]}
-      onCreate={(v) => {
-        createHall(v as unknown as Omit<Hall, 'id' | 'available'>);
+      onCreate={async (v) => {
+        try {
+          await createHall(v as unknown as Omit<Hall, 'id' | 'available'>);
+          showToast('Hall added');
+        } catch (err) {
+          showToast((err as Error).message, true);
+          throw err;
+        }
       }}
-      onUpdate={(hall, v) => {
-        updateHall(hall.id, v as Partial<Hall>);
+      onUpdate={async (hall, v) => {
+        try {
+          await updateHall(hall.id, v as Partial<Hall>);
+          showToast('Hall updated');
+        } catch (err) {
+          showToast((err as Error).message, true);
+          throw err;
+        }
       }}
-      onDelete={deleteHall}
+      onDelete={async (id) => {
+        try {
+          await deleteHall(id);
+          showToast('Hall deleted');
+        } catch (err) {
+          showToast((err as Error).message, true);
+          throw err;
+        }
+      }}
     />
   );
 }
