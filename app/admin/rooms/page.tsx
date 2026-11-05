@@ -18,7 +18,6 @@ export default function AdminRoomsPage() {
     <CrudManager<Room>
       title="Manage Rooms"
       subtitle="Add rooms, set prices and upload photos."
-      //icon="🏨"
       noun="Room"
       emptyText="No rooms yet."
       items={rooms}
@@ -40,7 +39,11 @@ export default function AdminRoomsPage() {
       ]}
       onCreate={async (v) => {
         try {
-          await createRoom(v as unknown as Omit<Room, 'id' | 'availableRooms'>);
+          const image = v.primaryImage instanceof File ? v.primaryImage : undefined;
+          await createRoom(
+            v as unknown as Omit<Room, 'id' | 'availableRooms'>,
+            image
+          );
           showToast('Room added');
         } catch (err) {
           showToast((err as Error).message, true);
