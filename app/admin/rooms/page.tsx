@@ -38,15 +38,35 @@ export default function AdminRoomsPage() {
         { label: 'Rooms free', render: (r) => `${r.availableRooms} / ${r.totalRooms}` },
         { label: 'Amenities', render: (r) => r.amenities.join(' · ') || '—' },
       ]}
-      onCreate={(v) => {
-        createRoom(v as unknown as Omit<Room, 'id' | 'availableRooms'>);
+      onCreate={async (v) => {
+        try {
+          await createRoom(v as unknown as Omit<Room, 'id' | 'availableRooms'>);
+          showToast('Room added');
+        } catch (err) {
+          showToast((err as Error).message, true);
+          throw err;
+        }
       }}
-      onUpdate={(room, v) => {
-        const total = Number(v.totalRooms);
-        const free = Math.max(0, room.availableRooms + (total - room.totalRooms));
-        updateRoom(room.id, { ...(v as Partial<Room>), availableRooms: free });
+      onUpdate={async (room, v) => {
+        try {
+          const total = Number(v.totalRooms);
+          const free = Math.max(0, room.availableRooms + (total - room.totalRooms));
+          await updateRoom(room.id, { ...(v as Partial<Room>), availableRooms: free });
+          showToast('Room updated');
+        } catch (err) {
+          showToast((err as Error).message, true);
+          throw err;
+        }
       }}
-      onDelete={deleteRoom}
+      onDelete={async (id) => {
+        try {
+          await deleteRoom(id);
+          showToast('Room deleted');
+        } catch (err) {
+          showToast((err as Error).message, true);
+          throw err;
+        }
+      }}
     />
   );
 }
