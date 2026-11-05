@@ -112,16 +112,22 @@ interface LodgeContextType {
     comment: string;
   }) => Promise<Feedback>;
 
-  // admin actions
-  createRoom: (data: Omit<Room, 'id' | 'availableRooms'>) => Promise<Room>;
+  // admin actions — image is optional and uploaded after create
+  createRoom: (
+    data: Omit<Room, 'id' | 'availableRooms'>,
+    image?: File
+  ) => Promise<Room>;
   updateRoom: (id: number, data: Partial<Room>) => Promise<void>;
   deleteRoom: (id: number) => Promise<void>;
 
-  createMeal: (data: Omit<Meal, 'id'>) => Promise<Meal>;
+  createMeal: (data: Omit<Meal, 'id'>, image?: File) => Promise<Meal>;
   updateMeal: (id: number, data: Partial<Meal>) => Promise<void>;
   deleteMeal: (id: number) => Promise<void>;
 
-  createHall: (data: Omit<Hall, 'id' | 'available'>) => Promise<Hall>;
+  createHall: (
+    data: Omit<Hall, 'id' | 'available'>,
+    image?: File
+  ) => Promise<Hall>;
   updateHall: (id: number, data: Partial<Hall>) => Promise<void>;
   deleteHall: (id: number) => Promise<void>;
 
@@ -467,7 +473,8 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // ── admin: rooms ─────────────────────────────────────────
   const createRoom = async (
-    data: Omit<Room, 'id' | 'availableRooms'>
+    data: Omit<Room, 'id' | 'availableRooms'>,
+    image?: File
   ): Promise<Room> => {
     try {
       const req: RoomRequest = {
@@ -478,7 +485,25 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         totalRooms: data.totalRooms,
         amenities: data.amenities,
       };
-      const r = await adminApi.createRoom(req);
+      let r = await adminApi.createRoom(req);
+
+      // Upload the image (if provided) — this attaches it to the room
+      if (image) {
+        try {
+          await adminApi.uploadRoomImage(r.id, image, true);
+        } catch (err) {
+          // Room was created — don't fail the whole flow, but warn
+          showToast(
+            `Room saved, but image upload failed: ${(err as Error).message}`,
+            true
+          );
+        }
+        // Re-fetch to get the updated primaryImage
+        const all = await publicApi.rooms();
+        const updated = all.find((x) => x.id === r.id);
+        if (updated) r = updated;
+      }
+
       const mapped = roomFromDto(r);
       setRooms((prev) => [...prev, mapped]);
       return mapped;
@@ -514,7 +539,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // ── admin: meals ─────────────────────────────────────────
-  const createMeal = async (data: Omit<Meal, 'id'>): Promise<Meal> => {
+  const createMeal = async (data: Omit<Meal, 'id'>, image?: File): Promise<Meal> => {
     try {
       const req: MealRequest = {
         name: data.name,
@@ -522,7 +547,22 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         description: data.description,
         price: data.price,
       };
-      const m = await adminApi.createMeal(req);
+      let m = await adminApi.createMeal(req);
+
+      if (image) {
+        try {
+          await adminApi.uploadMealImage(m.id, image);
+        } catch (err) {
+          showToast(
+            `Meal saved, but image upload failed: ${(err as Error).message}`,
+            true
+          );
+        }
+        const all = await publicApi.meals();
+        const updated = all.find((x) => x.id === m.id);
+        if (updated) m = updated;
+      }
+
       const mapped = mealFromDto(m);
       setMeals((prev) => [...prev, mapped]);
       return mapped;
@@ -556,7 +596,10 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   // ── admin: halls ─────────────────────────────────────────
-  const createHall = async (data: Omit<Hall, 'id' | 'available'>): Promise<Hall> => {
+  const createHall = async (
+    data: Omit<Hall, 'id' | 'available'>,
+    image?: File
+  ): Promise<Hall> => {
     try {
       const req: HallRequest = {
         name: data.name,
@@ -566,7 +609,22 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         pricePerHour: data.pricePerHour,
         pricePerDay: data.pricePerDay,
       };
-      const h = await adminApi.createHall(req);
+      let h = await adminApi.createHall(req);
+
+      if (image) {
+        try {
+          await adminApi.uploadHallImage(h.id, image, true);
+        } catch (err) {
+          showToast(
+            `Hall saved, but image upload failed: ${(err as Error).message}`,
+            true
+          );
+        }
+        const all = await publicApi.halls();
+        const updated = all.find((x) => x.id === h.id);
+        if (updated) h = updated;
+      }
+
       const mapped = hallFromDto(h);
       setHalls((prev) => [...prev, mapped]);
       return mapped;
