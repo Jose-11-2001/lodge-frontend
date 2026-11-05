@@ -18,7 +18,7 @@ export default function AdminMealsPage() {
     <CrudManager<Meal>
       title="Manage Meals"
       subtitle="Add dishes, set prices and upload photos."
-      icon="🍽️"
+      //icon="🍽️"
       noun="Meal"
       emptyText="No meals yet."
       items={meals}

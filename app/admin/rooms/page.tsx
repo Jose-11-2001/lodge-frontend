@@ -18,7 +18,7 @@ export default function AdminRoomsPage() {
     <CrudManager<Room>
       title="Manage Rooms"
       subtitle="Add rooms, set prices and upload photos."
-      icon="🏨"
+      //icon="🏨"
       noun="Room"
       emptyText="No rooms yet."
       items={rooms}

@@ -18,7 +18,7 @@ export default function AdminHallsPage() {
     <CrudManager<Hall>
       title="Manage Halls"
       subtitle="Add conference halls, set prices and upload photos."
-      icon="🏛️"
+      //icon="🏛️"
       noun="Hall"
       emptyText="No halls yet."
       items={halls}
