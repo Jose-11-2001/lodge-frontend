@@ -54,9 +54,13 @@ export default function AdminFeedbackPage() {
                       <button
                         className="btn btn-primary"
                         style={{ padding: '6px 14px' }}
-                        onClick={() => {
-                          resolveFeedback(f.id);
-                          showToast('Marked as resolved');
+                        onClick={async () => {
+                          try {
+                            await resolveFeedback(f.id);
+                            showToast('Marked as resolved');
+                          } catch (err) {
+                            showToast((err as Error).message, true);
+                          }
                         }}
                       >
                         Resolve
