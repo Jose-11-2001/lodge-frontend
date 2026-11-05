@@ -18,7 +18,6 @@ export default function AdminHallsPage() {
     <CrudManager<Hall>
       title="Manage Halls"
       subtitle="Add conference halls, set prices and upload photos."
-      //icon="🏛️"
       noun="Hall"
       emptyText="No halls yet."
       items={halls}
@@ -41,7 +40,11 @@ export default function AdminHallsPage() {
       ]}
       onCreate={async (v) => {
         try {
-          await createHall(v as unknown as Omit<Hall, 'id' | 'available'>);
+          const image = v.primaryImage instanceof File ? v.primaryImage : undefined;
+          await createHall(
+            v as unknown as Omit<Hall, 'id' | 'available'>,
+            image
+          );
           showToast('Hall added');
         } catch (err) {
           showToast((err as Error).message, true);
