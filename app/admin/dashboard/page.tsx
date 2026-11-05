@@ -87,10 +87,10 @@ export default function AdminDashboardPage() {
     'bg-[var(--card)] border border-[var(--line)] rounded-[var(--radius)] shadow-[var(--shadow-sm)]';
 
   const tiles = [
-    { label: '🏨 Rooms', href: '/admin/rooms' },
-    { label: '🍽️ Meals', href: '/admin/meals' },
-    { label: '🏛️ Halls', href: '/admin/halls' },
-    { label: '📋 Bookings', href: '/admin/bookings' },
+    { label: ' Rooms', href: '/admin/rooms' },
+    { label: ' Meals', href: '/admin/meals' },
+    { label: ' Halls', href: '/admin/halls' },
+    { label: ' Bookings', href: '/admin/bookings' },
     { label: '💬 Feedback', href: '/admin/feedback' },
   ];
 
