@@ -18,7 +18,6 @@ export default function AdminMealsPage() {
     <CrudManager<Meal>
       title="Manage Meals"
       subtitle="Add dishes, set prices and upload photos."
-      //icon="🍽️"
       noun="Meal"
       emptyText="No meals yet."
       items={meals}
@@ -37,7 +36,8 @@ export default function AdminMealsPage() {
       ]}
       onCreate={async (v) => {
         try {
-          await createMeal(v as unknown as Omit<Meal, 'id'>);
+          const image = v.primaryImage instanceof File ? v.primaryImage : undefined;
+          await createMeal(v as unknown as Omit<Meal, 'id'>, image);
           showToast('Meal added');
         } catch (err) {
           showToast((err as Error).message, true);
