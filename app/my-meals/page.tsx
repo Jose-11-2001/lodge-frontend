@@ -31,7 +31,7 @@ export default function MyMealsPage() {
 
       {list.length === 0 ? (
         <div className="empty">
-          <div className="ico">🍽️</div>
+          <div className="ico"></div>
           No meal orders yet.
           <Link href="/meals" className="btn btn-primary no-underline mt-2">
             Order a meal
