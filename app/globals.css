@@ -25,6 +25,17 @@
   --shadow-glow: 0 0 0 3px rgba(0, 0, 0, 0.06);
   --radius: 16px;
   --trans: 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* ---------- booking status colors ---------- */
+  --status-pending: #2563eb;
+  --status-confirmed: #059669;
+  --status-cancelled: #dc2626;
+  --status-completed: #9333ea;
+
+  --status-pending-bg: rgba(37, 99, 235, 0.08);
+  --status-confirmed-bg: rgba(5, 150, 105, 0.08);
+  --status-cancelled-bg: rgba(220, 38, 38, 0.08);
+  --status-completed-bg: rgba(147, 51, 234, 0.08);
 }
 
 * { box-sizing: border-box; }
@@ -42,8 +53,6 @@ body {
 .font-fraunces { font-family: 'Fraunces', serif; }
 
 /* ---------- aurora background ---------- */
-/* Disabled entirely (no dark mode to show it in). Kept so old JSX that
-   still renders <div className="aurora" /> doesn't break layout. */
 .aurora {
   display: none;
 }
@@ -105,6 +114,19 @@ body {
 .badge.ok { background: #ffffff; color: #047857; border-color: rgba(16, 185, 129, 0.4); }
 .badge.bad { background: #ffffff; color: var(--danger); border-color: rgba(220, 38, 38, 0.4); }
 .badge.warn { background: #ffffff; color: var(--warn); border-color: rgba(180, 83, 9, 0.4); }
+
+/* ---------- booking status colors ---------- */
+.status-pending    { color: var(--status-pending); background: var(--status-pending-bg); border: 1px solid rgba(37, 99, 235, 0.25); }
+.status-confirmed  { color: var(--status-confirmed); background: var(--status-confirmed-bg); border: 1px solid rgba(5, 150, 105, 0.25); }
+.status-cancelled  { color: var(--status-cancelled); background: var(--status-cancelled-bg); border: 1px solid rgba(220, 38, 38, 0.25); }
+.status-completed  { color: var(--status-completed); background: var(--status-completed-bg); border: 1px solid rgba(147, 51, 234, 0.25); }
+
+/* Small dot you can put next to a label */
+.status-dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; }
+.status-dot.pending   { background: var(--status-pending); }
+.status-dot.confirmed { background: var(--status-confirmed); }
+.status-dot.cancelled { background: var(--status-cancelled); }
+.status-dot.completed { background: var(--status-completed); }
 
 /* ---------- tables ---------- */
 .table-wrap {
