@@ -86,7 +86,7 @@ export default function RoomsPage() {
       />
 
       {shown.length === 0 ? (
-        <div className="empty"><div className="ico">🛏️</div>No rooms match your search.</div>
+        <div className="empty"><div className="ico"></div>No rooms match your search.</div>
       ) : (
         <div className="grid gap-[22px] grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
           {shown.map((room) => (
