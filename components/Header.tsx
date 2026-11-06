@@ -43,6 +43,7 @@ export default function Header() {
         { label: 'Halls', href: '/admin/halls' },
         { label: 'Bookings', href: '/admin/bookings' },
         { label: 'Feedback', href: '/admin/feedback' },
+        { label: 'Notifications', href: '/notifications' },   {/* ← ADDED */}
         { label: 'Settings', href: '/admin/settings' },
       ];
     }
