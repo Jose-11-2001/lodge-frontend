@@ -8,7 +8,7 @@ import { dateOnly } from '@/lib/format';
 
 export default function AdminFeedbackPage() {
   const admin = useRequireAdmin();
-  const { initializing, feedbackList, resolveFeedback, showToast } = useLodge();
+  const { initializing, feedbackList, resolveFeedback, showToast, refresh } = useLodge();
 
   if (initializing) return <div className="p-10 text-[var(--muted)]">Loading…</div>;
   if (!admin) return <div className="p-10 text-[var(--muted)]">Redirecting to login…</div>;
@@ -25,7 +25,12 @@ export default function AdminFeedbackPage() {
             {open} open · {feedbackList.length} total
           </p>
         </div>
-        <Link href="/admin/dashboard" className="btn btn-ghost no-underline">← Dashboard</Link>
+        <div className="flex gap-2">
+          <button onClick={() => refresh()} className="btn btn-ghost">
+            Refresh
+          </button>
+          <Link href="/admin/dashboard" className="btn btn-ghost no-underline">← Dashboard</Link>
+        </div>
       </div>
 
       {list.length === 0 ? (
@@ -35,7 +40,7 @@ export default function AdminFeedbackPage() {
           <table>
             <thead>
               <tr>
-                <th>ID</th><th>Customer</th><th>Booking</th><th>Rating</th>
+                <th>ID</th><th>Customer</th><th>Rating</th>
                 <th>Comment</th><th>Date</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
@@ -44,7 +49,6 @@ export default function AdminFeedbackPage() {
                 <tr key={f.id}>
                   <td>#{f.id}</td>
                   <td>{f.customerUsername}</td>
-                  <td>{f.bookingId ? `#${f.bookingId}` : '—'}</td>
                   <td><span className="stars">{'★'.repeat(f.rating) + '☆'.repeat(5 - f.rating)}</span></td>
                   <td style={{ maxWidth: 320 }}>{f.comment || '—'}</td>
                   <td>{dateOnly(f.createdAt)}</td>
