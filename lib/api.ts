@@ -815,3 +815,74 @@ export function imageUrl(path?: string | null): string {
   if (!path) return '/images/placeholder.jpg';
   return path.startsWith('http') ? path : `${API_BASE}${path}`;
 }
+// ── Workers (admin) ────────────────────────────────────────
+
+export interface WorkerDto {
+  id: number;
+  name: string;
+  phone?: string;
+  role?: string;
+  active: boolean;
+}
+
+export interface WorkerRequest {
+  name: string;
+  phone?: string;
+  role?: string;
+  active?: boolean;
+}
+
+export interface WorkerAssignmentDto {
+  id: number;
+  workerId: number;
+  workerName: string;
+  task: string;
+  dueDate?: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface AssignTaskRequest {
+  task: string;
+  dueDate?: string;
+  status?: string;
+}
+
+export const workersApi = {
+  list(): Promise<WorkerDto[]> {
+    return request<WorkerDto[]>('/api/admin/workers', {}, true);
+  },
+  create(req: WorkerRequest): Promise<WorkerDto> {
+    return request<WorkerDto>('/api/admin/workers', {
+      method: 'POST', body: JSON.stringify(req),
+    }, true);
+  },
+  update(id: number, req: WorkerRequest): Promise<WorkerDto> {
+    return request<WorkerDto>(`/api/admin/workers/${id}`, {
+      method: 'PUT', body: JSON.stringify(req),
+    }, true);
+  },
+  delete(id: number): Promise<void> {
+    return request<void>(`/api/admin/workers/${id}`, { method: 'DELETE' }, true);
+  },
+  assignmentsForWorker(id: number): Promise<WorkerAssignmentDto[]> {
+    return request<WorkerAssignmentDto[]>(`/api/admin/workers/${id}/assignments`, {}, true);
+  },
+  allAssignments(): Promise<WorkerAssignmentDto[]> {
+    return request<WorkerAssignmentDto[]>('/api/admin/workers/assignments', {}, true);
+  },
+  assign(id: number, req: AssignTaskRequest): Promise<WorkerAssignmentDto> {
+    return request<WorkerAssignmentDto>(`/api/admin/workers/${id}/assignments`, {
+      method: 'POST', body: JSON.stringify(req),
+    }, true);
+  },
+  updateAssignmentStatus(assignmentId: number, status: string): Promise<WorkerAssignmentDto> {
+    return request<WorkerAssignmentDto>(
+      `/api/admin/workers/assignments/${assignmentId}/status?status=${status}`,
+      { method: 'PATCH' }, true
+    );
+  },
+  deleteAssignment(assignmentId: number): Promise<void> {
+    return request<void>(`/api/admin/workers/assignments/${assignmentId}`, { method: 'DELETE' }, true);
+  },
+};
