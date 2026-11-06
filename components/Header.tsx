@@ -45,6 +45,7 @@ export default function Header() {
         { label: 'Feedback', href: '/admin/feedback' },
         { label: 'Notifications', href: '/notifications' },
         { label: 'Settings', href: '/admin/settings' },
+        { label: 'Workers', href: '/admin/workers' },
       ];
     }
     return [
