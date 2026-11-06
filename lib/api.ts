@@ -886,3 +886,51 @@ export const workersApi = {
     return request<void>(`/api/admin/workers/assignments/${assignmentId}`, { method: 'DELETE' }, true);
   },
 };
+// ── Meal Orders ─────────────────────────────────────
+
+export interface MealOrderResponse {
+  id: number;
+  mealId: number;
+  mealName: string;
+  customerUsername: string;
+  quantity: number;
+  serveAt: string;
+  totalPrice: number;
+  status: BookingStatus;
+  createdAt: string;
+  paid: boolean;
+  paymentReference?: string;
+  paymentMethod?: PaymentMethod;
+}
+
+export interface MealOrderRequest {
+  mealId: number;
+  quantity: number;
+  serveAt: string;
+}
+
+export const mealOrdersApi = {
+  create(req: MealOrderRequest): Promise<MealOrderResponse> {
+    return request<MealOrderResponse>(
+      '/api/meal-orders',
+      { method: 'POST', body: JSON.stringify(req) },
+      true
+    );
+  },
+  mine(): Promise<MealOrderResponse[]> {
+    return request<MealOrderResponse[]>('/api/meal-orders/my', {}, true);
+  },
+  cancel(id: number): Promise<void> {
+    return request<void>(`/api/meal-orders/${id}`, { method: 'DELETE' }, true);
+  },
+  adminAll(): Promise<MealOrderResponse[]> {
+    return request<MealOrderResponse[]>('/api/meal-orders/admin/all', {}, true);
+  },
+  adminUpdateStatus(id: number, status: BookingStatusInput): Promise<MealOrderResponse> {
+    return request<MealOrderResponse>(
+      `/api/meal-orders/admin/${id}/status?status=${status}`,
+      { method: 'PATCH' },
+      true
+    );
+  },
+};
