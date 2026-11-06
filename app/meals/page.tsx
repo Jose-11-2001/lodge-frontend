@@ -126,7 +126,7 @@ export default function MealsPage() {
 
       {shown.length === 0 ? (
         <div className="empty">
-          <div className="ico">🍽️</div>
+          <div className="ico"></div>
           No meals match your search.
         </div>
       ) : (
