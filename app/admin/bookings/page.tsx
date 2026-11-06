@@ -95,7 +95,7 @@ export default function AdminBookingsPage() {
       <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
         <div>
           <h2 className="m-0 font-fraunces font-bold text-[34px] tracking-tight">Bookings</h2>
-          <p className="m-0 mt-1 text-sm text-[var(--muted)]">Confirm or cancel what customers book.</p>
+          <p className="m-0 mt-1 text-sm text-[var(--muted)]">Confirm, complete or cancel what customers book.</p>
         </div>
         <Link href="/admin/dashboard" className="btn btn-ghost no-underline">← Dashboard</Link>
       </div>
@@ -140,13 +140,37 @@ export default function AdminBookingsPage() {
                   <td>{r.paid ? `✅ ${r.method || ''}` : '—'}</td>
                   <td>
                     <div className="flex gap-2 flex-wrap">
+                      {/* PENDING → CONFIRMED */}
                       {r.status === 'PENDING' && (
-                        <button className="btn btn-primary" style={{ padding: '6px 14px' }}
-                          onClick={() => change(r.id, 'CONFIRMED', 'Booking confirmed')}>Confirm</button>
+                        <button
+                          className="btn btn-primary"
+                          style={{ padding: '6px 14px' }}
+                          onClick={() => change(r.id, 'CONFIRMED', 'Booking confirmed')}
+                        >
+                          Confirm
+                        </button>
                       )}
-                      {r.status !== 'CANCELLED' && (
-                        <button className="btn btn-danger" style={{ padding: '6px 14px' }}
-                          onClick={() => change(r.id, 'CANCELLED', 'Booking cancelled')}>Cancel</button>
+
+                      {/* CONFIRMED → COMPLETED */}
+                      {r.status === 'CONFIRMED' && (
+                        <button
+                          className="btn btn-ghost"
+                          style={{ padding: '6px 14px' }}
+                          onClick={() => change(r.id, 'COMPLETED' as BookingStatusInput, 'Booking marked as completed')}
+                        >
+                          Mark Complete
+                        </button>
+                      )}
+
+                      {/* Any except CANCELLED/COMPLETED → CANCELLED */}
+                      {r.status !== 'CANCELLED' && r.status !== 'COMPLETED' && (
+                        <button
+                          className="btn btn-danger"
+                          style={{ padding: '6px 14px' }}
+                          onClick={() => change(r.id, 'CANCELLED', 'Booking cancelled')}
+                        >
+                          Cancel
+                        </button>
                       )}
                     </div>
                   </td>

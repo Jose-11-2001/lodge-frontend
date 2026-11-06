@@ -39,7 +39,7 @@ export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
  *  and the `status` query param on GET list endpoints).
  * Use this type for anything that will be sent to the API.
  */
-export type BookingStatusInput = 'PENDING' | 'CONFIRMED' | 'CANCELLED';
+export type BookingStatusInput = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
 
 export type PaymentMethod = 'CARD' | 'MOBILE_MONEY' | 'BANK_TRANSFER' | 'CASH';
 export type HallBillingMode = 'HOURLY' | 'DAILY';
