@@ -40,7 +40,7 @@ export default function AdminBookingsPage() {
     icon: string;
   }> = {
     rooms: {
-      //icon: '🛏️',
+      icon: '🛏️',                          // ← uncommented
       update: updateBookingStatus,
       rows: bookings.map((b) => ({
         id: b.id,
@@ -54,7 +54,7 @@ export default function AdminBookingsPage() {
       })),
     },
     halls: {
-      //icon: '🏛️',
+      icon: '🏛️',                          // ← uncommented
       update: updateHallBookingStatus,
       rows: hallBookings.map((h) => ({
         id: h.id,
@@ -68,7 +68,7 @@ export default function AdminBookingsPage() {
       })),
     },
     meals: {
-     // icon: '🍽️',
+      icon: '🍽️',                          // ← uncommented
       update: updateMealOrderStatus,
       rows: mealOrders.map((o) => ({
         id: o.id,
