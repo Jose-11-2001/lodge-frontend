@@ -152,7 +152,7 @@ export default function HallsPage() {
 
       {shown.length === 0 ? (
         <div className="empty">
-          <div className="ico">🏛️</div>No halls match your search.
+          <div className="ico"></div>No halls match your search.
         </div>
       ) : (
         <div className="grid gap-[22px] grid-cols-[repeat(auto-fill,minmax(280px,1fr))]">
