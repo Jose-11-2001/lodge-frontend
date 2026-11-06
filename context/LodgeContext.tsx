@@ -487,18 +487,15 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       };
       let r = await adminApi.createRoom(req);
 
-      // Upload the image (if provided) — this attaches it to the room
       if (image) {
         try {
           await adminApi.uploadRoomImage(r.id, image, true);
         } catch (err) {
-          // Room was created — don't fail the whole flow, but warn
           showToast(
             `Room saved, but image upload failed: ${(err as Error).message}`,
             true
           );
         }
-        // Re-fetch to get the updated primaryImage
         const all = await publicApi.rooms();
         const updated = all.find((x) => x.id === r.id);
         if (updated) r = updated;
