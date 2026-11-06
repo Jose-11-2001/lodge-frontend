@@ -55,6 +55,7 @@ export default function Header() {
       { label: 'My Bookings', href: '/my-bookings' },
       { label: 'My Halls', href: '/my-hall-bookings' },
       { label: 'Notifications', href: '/notifications' },
+      { label: 'Feedback', href: '/feedback' },
     ];
   };
 
