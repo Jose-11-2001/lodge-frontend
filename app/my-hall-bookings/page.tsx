@@ -17,7 +17,7 @@ export default function MyHallBookingsPage() {
     <MyBookingsView
       title="My Hall Bookings"
       subtitle="Your meetings, workshops and events."
-      icon="🏛️"
+      //icon="🏛️"
       emptyText="No hall bookings yet. Browse halls to book."
       newHref="/halls"
       newLabel="+ New booking"
