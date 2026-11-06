@@ -9,7 +9,7 @@ import { money, dateOnly, dateTime } from '@/lib/format';
 import { BookingStatus, PaymentMethod } from '@/types';
 import type { BookingStatusInput } from '@/lib/api';
 
-type Tab = 'rooms' | 'halls';
+type Tab = 'rooms' | 'halls' | 'meals';
 
 interface Row {
   id: number;
@@ -26,8 +26,8 @@ export default function AdminBookingsPage() {
   const admin = useRequireAdmin();
   const {
     initializing,
-    bookings, hallBookings,
-    updateBookingStatus, updateHallBookingStatus, showToast,
+    bookings, hallBookings, mealOrders,
+    updateBookingStatus, updateHallBookingStatus, updateMealOrderStatus, showToast,
   } = useLodge();
   const [tab, setTab] = useState<Tab>('rooms');
 
@@ -40,7 +40,7 @@ export default function AdminBookingsPage() {
     icon: string;
   }> = {
     rooms: {
-      icon: '🛏️',
+      //icon: '🛏️',
       update: updateBookingStatus,
       rows: bookings.map((b) => ({
         id: b.id,
@@ -54,7 +54,7 @@ export default function AdminBookingsPage() {
       })),
     },
     halls: {
-      icon: '🏛️',
+      //icon: '🏛️',
       update: updateHallBookingStatus,
       rows: hallBookings.map((h) => ({
         id: h.id,
@@ -65,6 +65,20 @@ export default function AdminBookingsPage() {
         status: h.status,
         paid: h.paid,
         method: h.paymentMethod ?? null,
+      })),
+    },
+    meals: {
+     // icon: '🍽️',
+      update: updateMealOrderStatus,
+      rows: mealOrders.map((o) => ({
+        id: o.id,
+        customer: o.customerUsername,
+        item: `${o.mealName} × ${o.quantity}`,
+        when: dateTime(o.serveAt),
+        total: o.totalPrice,
+        status: o.status,
+        paid: o.paid,
+        method: o.paymentMethod ?? null,
       })),
     },
   };
@@ -88,6 +102,7 @@ export default function AdminBookingsPage() {
   const tabs: { key: Tab; label: string }[] = [
     { key: 'rooms', label: `Rooms (${bookings.length})` },
     { key: 'halls', label: `Halls (${hallBookings.length})` },
+    { key: 'meals', label: `Meals (${mealOrders.length})` },
   ];
 
   return (
@@ -118,7 +133,7 @@ export default function AdminBookingsPage() {
       </div>
 
       {list.length === 0 ? (
-        <div className="empty"><div className="ico">{current.icon}</div>No bookings here yet.</div>
+        <div className="empty"><div className="ico">{current.icon}</div>No orders here yet.</div>
       ) : (
         <div className="table-wrap">
           <table>
@@ -140,34 +155,31 @@ export default function AdminBookingsPage() {
                   <td>{r.paid ? `✅ ${r.method || ''}` : '—'}</td>
                   <td>
                     <div className="flex gap-2 flex-wrap">
-                      {/* PENDING → CONFIRMED */}
                       {r.status === 'PENDING' && (
                         <button
                           className="btn btn-primary"
                           style={{ padding: '6px 14px' }}
-                          onClick={() => change(r.id, 'CONFIRMED', 'Booking confirmed')}
+                          onClick={() => change(r.id, 'CONFIRMED', 'Confirmed')}
                         >
                           Confirm
                         </button>
                       )}
 
-                      {/* CONFIRMED → COMPLETED */}
                       {r.status === 'CONFIRMED' && (
                         <button
                           className="btn btn-ghost"
                           style={{ padding: '6px 14px' }}
-                          onClick={() => change(r.id, 'COMPLETED' as BookingStatusInput, 'Booking marked as completed')}
+                          onClick={() => change(r.id, 'COMPLETED', 'Marked as completed')}
                         >
                           Mark Complete
                         </button>
                       )}
 
-                      {/* Any except CANCELLED/COMPLETED → CANCELLED */}
                       {r.status !== 'CANCELLED' && r.status !== 'COMPLETED' && (
                         <button
                           className="btn btn-danger"
                           style={{ padding: '6px 14px' }}
-                          onClick={() => change(r.id, 'CANCELLED', 'Booking cancelled')}
+                          onClick={() => change(r.id, 'CANCELLED', 'Cancelled')}
                         >
                           Cancel
                         </button>
