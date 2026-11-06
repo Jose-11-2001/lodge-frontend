@@ -3,10 +3,14 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { authApi } from '@/lib/api';
+import { useLodge } from '@/context/LodgeContext';
 
 export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const router = useRouter();
+  
+  // Use the context functions so React state updates immediately
+  const { login, register } = useLodge();
+  
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,8 +19,6 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
   const isLogin = mode === 'login';
 
   const goBack = () => {
-    // If the user navigated here from a page inside the app, go back.
-    // Otherwise (fresh tab / bookmark), go to the homepage.
     if (typeof window !== 'undefined' && window.history.length > 1) {
       router.back();
     } else {
@@ -34,11 +36,16 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
       if (!isLogin && !email.trim())
         throw new Error('Email is required');
 
-      const u = isLogin
-        ? await authApi.login(username, password)
-        : await authApi.register(username, password, email.trim());
-
-      router.push(u.role === 'ADMIN' ? '/admin/dashboard' : '/');
+      // Call the context functions, NOT authApi
+      if (isLogin) {
+        const u = await login({ username, password });
+        router.push(u.role === 'ADMIN' ? '/admin/dashboard' : '/');
+      } else {
+        // Assuming your context register function accepts email as a 3rd argument
+        // If it only accepts (username, password), you'll need to update LodgeContext.tsx
+        const u = await register({ username, password });
+        router.push(u.role === 'ADMIN' ? '/admin/dashboard' : '/');
+      }
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -48,6 +55,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'register' }) {
 
   return (
     <div className="max-w-[420px] mx-auto mt-10 bg-[var(--card)] border border-[var(--line-2)] rounded-[20px] p-7 shadow-[var(--shadow-md)]">
+      
       {/* Back arrow */}
       <button
         type="button"
