@@ -12,7 +12,8 @@ type CardItem =
 interface CardProps {
   item: CardItem;
   onAction?: () => void;
-  actionLabel?: string;  disabled?: boolean;
+  actionLabel?: string;
+  disabled?: boolean;
   rating?: { avg: number; count: number };
   onRatingClick?: () => void;
 }
@@ -67,12 +68,12 @@ export default function Card({
           <div className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[rgba(0,0,0,0.6)] text-white text-xs font-semibold backdrop-blur-md">
             <span
               className={`w-[7px] h-[7px] rounded-full ${
-                item.available
-                  ? 'bg-[#22d3a8] shadow-[0_0_8px_#22d3a8] animate-pulse'
-                  : 'bg-[#ff6b7e]'
+                item.available === false
+                  ? 'bg-[#ff6b7e]'
+                  : 'bg-[#22d3a8] shadow-[0_0_8px_#22d3a8] animate-pulse'
               }`}
             />
-            <span>{item.available ? 'Available' : 'Booked'}</span>
+            <span>{item.available === false ? 'Booked' : 'Available'}</span>
           </div>
         )}
       </div>
