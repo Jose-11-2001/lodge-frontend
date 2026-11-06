@@ -4,9 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { useLodge } from '@/context/LodgeContext';
 import { useRequireAdmin } from '@/lib/useRequireAdmin';
-import { money } from '@/lib/format';
+import { money, dateOnly } from '@/lib/format';
 
-// Use the CSS variables we defined in globals.css
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'var(--status-pending)',
   CONFIRMED: 'var(--status-confirmed)',
@@ -39,7 +38,6 @@ export default function AdminDashboardPage() {
 
   const openFeedback = feedbackList.filter((f) => !f.resolved).length;
 
-  // Stat cards with colors, no emojis
   const stats = [
     { n: rooms.length, l: 'Rooms', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
     { n: meals.length, l: 'Meals', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100' },
@@ -74,7 +72,7 @@ export default function AdminDashboardPage() {
     color: STATUS_COLORS[s],
     count: allStatuses.filter((x) => x === s).length,
   }));
-  
+
   let acc = 0;
   const segments = counts
     .filter((c) => c.count > 0)
@@ -120,12 +118,12 @@ export default function AdminDashboardPage() {
       <h2 className="m-0 font-fraunces font-bold text-[34px] tracking-tight text-gray-900">Dashboard</h2>
       <p className="mt-1 mb-8 text-sm text-gray-500">Welcome back, {admin.username}. Here is everything at a glance.</p>
 
-      {/* Colorful Stat Cards (No Emojis, clean minimalist circles) */}
+      {/* Colorful Stat Cards */}
       <div className="grid gap-5 grid-cols-[repeat(auto-fill,minmax(200px,1fr))] mb-8">
         {stats.map((s) => (
           <div key={s.l} className={`${card} p-6 flex items-center gap-4`}>
             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${s.bg} ${s.border} border`}>
-               <div className={`w-3 h-3 rounded-full ${s.color.replace('text-', 'bg-')}`} />
+              <div className={`w-3 h-3 rounded-full ${s.color.replace('text-', 'bg-')}`} />
             </div>
             <div>
               <div className={`font-fraunces font-bold text-[28px] leading-none ${s.color}`}>
@@ -141,7 +139,6 @@ export default function AdminDashboardPage() {
 
       {/* Charts Row */}
       <div className="grid gap-6 grid-cols-1 md:grid-cols-2 mb-8">
-        
         {/* Weekly Revenue Bar Chart */}
         <div className={`${card} p-7`}>
           <div className="flex justify-between items-start mb-6">
@@ -154,11 +151,10 @@ export default function AdminDashboardPage() {
               <div className="text-[10px] uppercase text-gray-400 font-bold">Last 7 days</div>
             </div>
           </div>
-          
+
           <div className="flex items-end gap-3 h-[160px] mt-4">
             {revenue.map((v, i) => (
               <div key={i} className="flex-1 h-full flex flex-col justify-end group relative">
-                {/* Tooltip on hover */}
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none">
                   {money(v)}
                 </div>
@@ -185,9 +181,8 @@ export default function AdminDashboardPage() {
         <div className={`${card} p-7`}>
           <h3 className="m-0 font-fraunces font-bold text-lg text-gray-900">Bookings by status</h3>
           <div className="text-xs text-gray-500 mt-1 mb-6">Rooms, halls and meals</div>
-          
+
           <div className="flex items-center justify-between gap-8">
-            {/* Donut */}
             <div
               className="w-[160px] h-[160px] rounded-full flex items-center justify-center shrink-0 relative shadow-inner"
               style={{ background: total ? `conic-gradient(${segments})` : '#f3f4f6' }}
@@ -197,8 +192,7 @@ export default function AdminDashboardPage() {
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Total</span>
               </div>
             </div>
-            
-            {/* Legend */}
+
             <div className="flex flex-col gap-3 flex-1">
               {counts.map((c) => (
                 <div key={c.name} className="flex items-center justify-between">
@@ -218,9 +212,9 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions (Clean SVG icons instead of emojis) */}
+      {/* Quick Actions */}
       <h3 className="m-0 font-fraunces font-bold text-lg text-gray-900 mb-4 mt-2">Quick Actions</h3>
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-5 mb-8">
         {tiles.map((t) => (
           <Link
             key={t.href}
@@ -231,6 +225,78 @@ export default function AdminDashboardPage() {
             <span className="text-sm font-semibold text-gray-700 text-center">{t.label}</span>
           </Link>
         ))}
+      </div>
+
+      {/* Recent Activity */}
+      <div className="mt-2">
+        <h3 className="m-0 font-fraunces font-bold text-lg text-gray-900 mb-4">Recent Activity</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Recent Bookings */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="m-0 font-semibold text-gray-900">Latest bookings</h4>
+              <Link
+                href="/admin/bookings"
+                className="text-xs text-blue-600 font-semibold hover:underline no-underline"
+              >
+                View all →
+              </Link>
+            </div>
+            {bookings.length === 0 ? (
+              <p className="text-sm text-gray-500 m-0">No bookings yet.</p>
+            ) : (
+              <ul className="m-0 p-0 list-none flex flex-col gap-3">
+                {[...bookings].slice(-5).reverse().map((b) => (
+                  <li key={b.id} className="flex justify-between items-start gap-3 text-sm">
+                    <div>
+                      <div className="font-medium text-gray-900">{b.roomName}</div>
+                      <div className="text-xs text-gray-500">
+                        {b.customerUsername} · {dateOnly(b.checkIn)} → {dateOnly(b.checkOut)}
+                      </div>
+                    </div>
+                    <span className={`badge status-${b.status.toLowerCase()}`}>
+                      {b.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          {/* Recent Feedback */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h4 className="m-0 font-semibold text-gray-900">Latest feedback</h4>
+              <Link
+                href="/admin/feedback"
+                className="text-xs text-blue-600 font-semibold hover:underline no-underline"
+              >
+                View all →
+              </Link>
+            </div>
+            {feedbackList.length === 0 ? (
+              <p className="text-sm text-gray-500 m-0">No feedback yet.</p>
+            ) : (
+              <ul className="m-0 p-0 list-none flex flex-col gap-3">
+                {[...feedbackList]
+                  .filter((f) => !f.resolved)
+                  .slice(-5)
+                  .reverse()
+                  .map((f) => (
+                    <li key={f.id} className="flex justify-between items-start gap-3 text-sm">
+                      <div>
+                        <div className="font-medium text-gray-900">{f.customerUsername}</div>
+                        <div className="text-xs text-gray-500">
+                          {'★'.repeat(f.rating)} — {f.comment?.slice(0, 40) || '—'}
+                        </div>
+                      </div>
+                      <span className="badge warn">Open</span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
