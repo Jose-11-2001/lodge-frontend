@@ -29,12 +29,14 @@ import {
   feedbackApi,
   adminApi,
   siteSettingsApi,
+  mealOrdersApi,              // ← NEW IMPORT
   ApiError,
   RoomDto,
   MealDto,
   HallDto,
   BookingResponse,
   HallBookingResponse,
+  MealOrderResponse,          // ← NEW
   FeedbackDto,
   RoomRequest,
   MealRequest,
@@ -43,23 +45,16 @@ import {
 } from '@/lib/api';
 import { USER_KEY, ROLE_KEY, hasSavedSession } from '@/lib/auth';
 
-// ─────────────────────────────────────────────────────────────
-// Context shape
-// ─────────────────────────────────────────────────────────────
-
 interface LodgeContextType {
-  // ui
   toastMessage: { msg: string; err?: boolean } | null;
   showToast: (msg: string, err?: boolean) => void;
 
-  // auth
   user: User | null;
   initializing: boolean;
   login: (credentials: { username: string; password: string }) => Promise<User>;
   register: (credentials: { username: string; password: string }) => Promise<User>;
   logout: () => void;
 
-  // data
   rooms: Room[];
   meals: Meal[];
   halls: Hall[];
@@ -70,14 +65,12 @@ interface LodgeContextType {
   loading: boolean;
   refresh: () => Promise<void>;
 
-  // site settings
   lodgeName: string;
   logoUrl: string | null;
   refreshSiteSettings: () => Promise<void>;
   updateLodgeName: (name: string) => Promise<void>;
   uploadLogo: (file: File) => Promise<void>;
 
-  // customer actions
   createBooking: (data: {
     roomId: number;
     checkIn: string;
@@ -112,7 +105,6 @@ interface LodgeContextType {
     comment: string;
   }) => Promise<Feedback>;
 
-  // admin actions — image is optional and uploaded after create
   createRoom: (
     data: Omit<Room, 'id' | 'availableRooms'>,
     image?: File
@@ -133,15 +125,11 @@ interface LodgeContextType {
 
   updateBookingStatus: (id: number, status: BookingStatusInput) => Promise<void>;
   updateHallBookingStatus: (id: number, status: BookingStatusInput) => Promise<void>;
-  updateMealOrderStatus: (id: number, status: BookingStatus) => Promise<void>;
+  updateMealOrderStatus: (id: number, status: BookingStatusInput) => Promise<void>;
   resolveFeedback: (id: number, resolved?: boolean) => Promise<void>;
 }
 
 const LodgeContext = createContext<LodgeContextType | undefined>(undefined);
-
-// ─────────────────────────────────────────────────────────────
-// DTO → model mappers
-// ─────────────────────────────────────────────────────────────
 
 const roomFromDto = (r: RoomDto): Room => ({
   ...r,
@@ -178,6 +166,21 @@ const feedbackFromDto = (f: FeedbackDto): Feedback => ({
   bookingId: f.bookingId ?? null,
 });
 
+const mealOrderFromDto = (o: MealOrderResponse): MealOrder => ({
+  id: o.id,
+  mealId: o.mealId,
+  mealName: o.mealName,
+  customerUsername: o.customerUsername,
+  quantity: o.quantity,
+  serveAt: o.serveAt,
+  totalPrice: o.totalPrice,
+  status: o.status,
+  createdAt: o.createdAt,
+  paid: o.paid,
+  paymentReference: o.paymentReference ?? null,
+  paymentMethod: o.paymentMethod ?? null,
+});
+
 const extractError = (e: unknown): Error => {
   if (e instanceof ApiError) {
     return new Error(e.message || `Request failed (${e.status})`);
@@ -186,30 +189,22 @@ const extractError = (e: unknown): Error => {
   return new Error('Unknown error');
 };
 
-// ─────────────────────────────────────────────────────────────
-// Provider
-// ─────────────────────────────────────────────────────────────
-
 export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // ui
   const [toastMessage, setToastMessage] = useState<{ msg: string; err?: boolean } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // session
   const [user, setUser] = useState<User | null>(null);
   const [initializing, setInitializing] = useState<boolean>(true);
 
-  // backend-backed caches
   const [rooms, setRooms] = useState<Room[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [halls, setHalls] = useState<Hall[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [hallBookings, setHallBookings] = useState<HallBooking[]>([]);
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
-  const [mealOrders] = useState<MealOrder[]>([]);
+  const [mealOrders, setMealOrders] = useState<MealOrder[]>([]);   // ← now writable
   const [loading, setLoading] = useState<boolean>(false);
 
-  // site settings
   const [lodgeName, setLodgeName] = useState<string>('LodgeApp');
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
@@ -219,7 +214,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     toastTimer.current = setTimeout(() => setToastMessage(null), 3000);
   }, []);
 
-  // ── session hydration ─────────────────────────────────────
   useEffect(() => {
     try {
       if (!hasSavedSession()) return;
@@ -233,7 +227,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
-  // ── site settings ─────────────────────────────────────────
   const refreshSiteSettings = useCallback(async () => {
     try {
       const s = await siteSettingsApi.read();
@@ -259,7 +252,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setLodgeName(s.lodgeName || 'LodgeApp');
   };
 
-  // ── data loading ──────────────────────────────────────────
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
@@ -273,22 +265,26 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setHalls(h.map(hallFromDto));
 
       if (authStore.isLoggedIn()) {
-        const [myBookings, myHallBookings] = await Promise.all([
+        const [myBookings, myHallBookings, myMealOrders] = await Promise.all([
           bookingsApi.mine().catch(() => []),
           hallBookingsApi.mine().catch(() => []),
+          mealOrdersApi.mine().catch(() => []),
         ]);
         setBookings(myBookings.map(bookingFromDto));
         setHallBookings(myHallBookings.map(hallBookingFromDto));
+        setMealOrders(myMealOrders.map(mealOrderFromDto));   // ← NEW
 
         if (authStore.isAdmin()) {
-          const [allBookings, allHallBookings, allFeedback] = await Promise.all([
+          const [allBookings, allHallBookings, allFeedback, allMealOrders] = await Promise.all([
             adminApi.listBookings({ size: 100 }).catch(() => null),
             adminApi.listHallBookings({ size: 100 }).catch(() => null),
             adminApi.listFeedback({ size: 100 }).catch(() => null),
+            mealOrdersApi.adminAll().catch(() => null),         // ← NEW
           ]);
           if (allBookings) setBookings(allBookings.content.map(bookingFromDto));
           if (allHallBookings) setHallBookings(allHallBookings.content.map(hallBookingFromDto));
           if (allFeedback) setFeedbackList(allFeedback.content.map(feedbackFromDto));
+          if (allMealOrders) setMealOrders(allMealOrders.map(mealOrderFromDto));
         }
       }
     } catch (e) {
@@ -302,7 +298,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     refresh();
   }, [refresh, user]);
 
-  // ── auth ──────────────────────────────────────────────────
   const login = async ({
     username,
     password,
@@ -342,11 +337,11 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setUser(null);
     setBookings([]);
     setHallBookings([]);
+    setMealOrders([]);
     setFeedbackList([]);
     showToast('Logged out');
   };
 
-  // ── room bookings ─────────────────────────────────────────
   const createBooking = async (data: {
     roomId: number;
     checkIn: string;
@@ -388,7 +383,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── hall bookings ─────────────────────────────────────────
   const createHallBooking = async (data: {
     hallId: number;
     startTime: string;
@@ -432,26 +426,37 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── meal orders (not backend-supported yet) ───────────────
-  const createMealOrder = async (_data: {
+  // ── Meal orders (now backed by real API) ─────────────────
+  const createMealOrder = async (data: {
     mealId: number;
     quantity: number;
     serveAt: string;
   }): Promise<MealOrder> => {
-    throw new Error(
-      'Meal ordering is not yet supported by the backend. Ask the backend team to add POST /api/meal-orders.'
-    );
+    try {
+      const m = await mealOrdersApi.create(data);
+      const mapped = mealOrderFromDto(m);
+      setMealOrders((prev) => [...prev, mapped]);
+      return mapped;
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
   const payMealOrder = async (_id: number, _method: PaymentMethod): Promise<MealOrder> => {
-    throw new Error('Meal ordering is not yet supported by the backend.');
+    throw new Error('Payment for meal orders is not supported yet — pay at reception.');
   };
 
-  const cancelMealOrder = async (_id: number): Promise<void> => {
-    throw new Error('Meal ordering is not yet supported by the backend.');
+  const cancelMealOrder = async (id: number): Promise<void> => {
+    try {
+      await mealOrdersApi.cancel(id);
+      setMealOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: 'CANCELLED' } : o))
+      );
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
-  // ── feedback ──────────────────────────────────────────────
   const createFeedback = async (data: {
     bookingId?: number | null;
     rating: number;
@@ -471,7 +476,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── admin: rooms ─────────────────────────────────────────
   const createRoom = async (
     data: Omit<Room, 'id' | 'availableRooms'>,
     image?: File
@@ -491,10 +495,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         try {
           await adminApi.uploadRoomImage(r.id, image, true);
         } catch (err) {
-          showToast(
-            `Room saved, but image upload failed: ${(err as Error).message}`,
-            true
-          );
+          showToast(`Room saved, but image upload failed: ${(err as Error).message}`, true);
         }
         const all = await publicApi.rooms();
         const updated = all.find((x) => x.id === r.id);
@@ -535,7 +536,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── admin: meals ─────────────────────────────────────────
   const createMeal = async (data: Omit<Meal, 'id'>, image?: File): Promise<Meal> => {
     try {
       const req: MealRequest = {
@@ -550,10 +550,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         try {
           await adminApi.uploadMealImage(m.id, image);
         } catch (err) {
-          showToast(
-            `Meal saved, but image upload failed: ${(err as Error).message}`,
-            true
-          );
+          showToast(`Meal saved, but image upload failed: ${(err as Error).message}`, true);
         }
         const all = await publicApi.meals();
         const updated = all.find((x) => x.id === m.id);
@@ -592,7 +589,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── admin: halls ─────────────────────────────────────────
   const createHall = async (
     data: Omit<Hall, 'id' | 'available'>,
     image?: File
@@ -612,10 +608,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         try {
           await adminApi.uploadHallImage(h.id, image, true);
         } catch (err) {
-          showToast(
-            `Hall saved, but image upload failed: ${(err as Error).message}`,
-            true
-          );
+          showToast(`Hall saved, but image upload failed: ${(err as Error).message}`, true);
         }
         const all = await publicApi.halls();
         const updated = all.find((x) => x.id === h.id);
@@ -656,7 +649,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── admin: booking statuses + feedback ───────────────────
   const updateBookingStatus = async (
     id: number,
     status: BookingStatusInput
@@ -684,10 +676,17 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateMealOrderStatus = async (
-    _id: number,
-    _status: BookingStatus
+    id: number,
+    status: BookingStatusInput
   ): Promise<void> => {
-    throw new Error('Meal ordering is not yet supported by the backend.');
+    try {
+      const m = await mealOrdersApi.adminUpdateStatus(id, status);
+      setMealOrders((prev) =>
+        prev.map((x) => (x.id === id ? mealOrderFromDto(m) : x))
+      );
+    } catch (e) {
+      throw extractError(e);
+    }
   };
 
   const resolveFeedback = async (id: number, resolved = true): Promise<void> => {
@@ -704,51 +703,19 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <LodgeContext.Provider
       value={{
-        toastMessage,
-        showToast,
-        user,
-        initializing,
-        login,
-        register,
-        logout,
-        rooms,
-        meals,
-        halls,
-        bookings,
-        hallBookings,
-        mealOrders,
-        feedbackList,
-        loading,
-        refresh,
-
-        lodgeName,
-        logoUrl,
-        refreshSiteSettings,
-        updateLodgeName,
-        uploadLogo,
-
-        createBooking,
-        payBooking,
-        cancelBooking,
-        createHallBooking,
-        payHallBooking,
-        cancelHallBooking,
-        createMealOrder,
-        payMealOrder,
-        cancelMealOrder,
+        toastMessage, showToast, user, initializing,
+        login, register, logout,
+        rooms, meals, halls, bookings, hallBookings, mealOrders, feedbackList,
+        loading, refresh,
+        lodgeName, logoUrl, refreshSiteSettings, updateLodgeName, uploadLogo,
+        createBooking, payBooking, cancelBooking,
+        createHallBooking, payHallBooking, cancelHallBooking,
+        createMealOrder, payMealOrder, cancelMealOrder,
         createFeedback,
-        createRoom,
-        updateRoom,
-        deleteRoom,
-        createMeal,
-        updateMeal,
-        deleteMeal,
-        createHall,
-        updateHall,
-        deleteHall,
-        updateBookingStatus,
-        updateHallBookingStatus,
-        updateMealOrderStatus,
+        createRoom, updateRoom, deleteRoom,
+        createMeal, updateMeal, deleteMeal,
+        createHall, updateHall, deleteHall,
+        updateBookingStatus, updateHallBookingStatus, updateMealOrderStatus,
         resolveFeedback,
       }}
     >
