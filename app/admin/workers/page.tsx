@@ -41,11 +41,11 @@ export default function AdminWorkersPage() {
   const [taskDue, setTaskDue] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // ── NEW: edit state
+  // Edit state
   const [editing, setEditing] = useState<EditDraft>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // ── NEW: PDF export state
+  // PDF export state
   const [pdfRange, setPdfRange] = useState<PdfRange>('daily');
   const [exporting, setExporting] = useState(false);
 
@@ -143,7 +143,6 @@ export default function AdminWorkersPage() {
     }
   };
 
-  // ── NEW: save worker edit
   const saveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing) return;
@@ -166,14 +165,12 @@ export default function AdminWorkersPage() {
     }
   };
 
-  // ── NEW: filter assignments by range
   const filteredForPdf = useMemo(() => {
     const now = new Date();
     const start = new Date(now);
     if (pdfRange === 'daily') {
       start.setHours(0, 0, 0, 0);
     } else {
-      // weekly = last 7 days (adjust if you want Mon–Sun calendar week)
       start.setDate(now.getDate() - 7);
       start.setHours(0, 0, 0, 0);
     }
@@ -183,7 +180,6 @@ export default function AdminWorkersPage() {
     });
   }, [assignments, pdfRange]);
 
-  // ── NEW: generate PDF
   const downloadPdf = async () => {
     if (filteredForPdf.length === 0) {
       showToast(`No assignments in the selected ${pdfRange} range`, true);
@@ -241,13 +237,80 @@ export default function AdminWorkersPage() {
         Add staff, see who is active, and assign them tasks.
       </p>
 
-      {/* Two forms row — unchanged */}
+      {/* ⬇️ THE TWO FORMS — restored ⬇️ */}
       <div className="grid gap-4 md:grid-cols-2 mb-8">
-        {/* ... your existing two forms verbatim ... */}
-        {/* (Add worker + Assign task forms) */}
-      </div>
+        {/* Add Worker */}
+        <form
+          onSubmit={addWorker}
+          className="bg-white border border-[var(--line)] rounded-2xl p-6"
+        >
+          <h3 className="m-0 mb-4 font-fraunces font-bold text-lg">Add a worker</h3>
+          <div className="field">
+            <label>Name</label>
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} required />
+          </div>
+          <div className="field">
+            <label>Phone (optional)</label>
+            <input value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+          </div>
+          <div className="field">
+            <label>Role</label>
+            <select value={newRole} onChange={(e) => setNewRole(e.target.value)}>
+              <option>Cleaner</option>
+              <option>Chef</option>
+              <option>Waiter</option>
+              <option>Manager</option>
+              <option>Maintenance</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={submitting}>
+            {submitting ? 'Saving…' : 'Add worker'}
+          </button>
+        </form>
 
-      {/* Workers table — now with Edit button */}
+        {/* Assign Task */}
+        <form
+          onSubmit={assignTask}
+          className="bg-white border border-[var(--line)] rounded-2xl p-6"
+        >
+          <h3 className="m-0 mb-4 font-fraunces font-bold text-lg">Assign a task</h3>
+          <div className="field">
+            <label>Worker</label>
+            <select
+              value={taskWorkerId}
+              onChange={(e) => setTaskWorkerId(Number(e.target.value) || '')}
+              required
+            >
+              <option value="">— pick a worker —</option>
+              {workers.filter((w) => w.active).map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name} · {w.role || '—'}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label>Task</label>
+            <input
+              value={taskTitle}
+              onChange={(e) => setTaskTitle(e.target.value)}
+              placeholder="e.g. Clean rooms 12–14"
+              required
+            />
+          </div>
+          <div className="field">
+            <label>Due date (optional)</label>
+            <input type="date" value={taskDue} onChange={(e) => setTaskDue(e.target.value)} />
+          </div>
+          <button className="btn btn-primary" type="submit" disabled={submitting}>
+            {submitting ? 'Assigning…' : 'Assign'}
+          </button>
+        </form>
+      </div>
+      {/* ⬆️ END FORMS ⬆️ */}
+
+      {/* Workers table */}
       <h3 className="m-0 mb-4 font-fraunces font-bold text-lg">All workers ({workers.length})</h3>
       {loading ? (
         <div className="text-[var(--muted)] text-sm">Loading…</div>
@@ -305,7 +368,7 @@ export default function AdminWorkersPage() {
         </div>
       )}
 
-      {/* Assignments table header — now with PDF controls */}
+      {/* Assignments header + PDF controls */}
       <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
         <h3 className="m-0 font-fraunces font-bold text-lg">
           Assignments ({assignments.length})
@@ -335,11 +398,58 @@ export default function AdminWorkersPage() {
         <div className="empty"><div className="ico">📋</div>No tasks assigned yet.</div>
       ) : (
         <div className="table-wrap">
-          <table>{/* ... your existing assignments table verbatim ... */}</table>
+          <table>
+            <thead>
+              <tr>
+                <th>Worker</th><th>Task</th><th>Due</th>
+                <th>Created</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {assignments.map((a) => (
+                <tr key={a.id}>
+                  <td>{a.workerName}</td>
+                  <td>{a.task}</td>
+                  <td>{a.dueDate ? dateOnly(a.dueDate) : '—'}</td>
+                  <td>{dateOnly(a.createdAt)}</td>
+                  <td><span className={badge(a.status)}>{a.status}</span></td>
+                  <td>
+                    <div className="flex gap-2 flex-wrap">
+                      {a.status === 'PENDING' && (
+                        <button
+                          className="btn btn-primary"
+                          style={{ padding: '6px 14px' }}
+                          onClick={() => changeStatus(a.id, 'IN_PROGRESS')}
+                        >
+                          Start
+                        </button>
+                      )}
+                      {a.status !== 'DONE' && (
+                        <button
+                          className="btn btn-ghost"
+                          style={{ padding: '6px 14px' }}
+                          onClick={() => changeStatus(a.id, 'DONE')}
+                        >
+                          Done
+                        </button>
+                      )}
+                      <button
+                        className="btn btn-danger"
+                        style={{ padding: '6px 14px' }}
+                        onClick={() => removeAssignment(a.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* ── NEW: Edit worker modal */}
+      {/* Edit worker modal */}
       {editing && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
