@@ -36,6 +36,9 @@ interface Props<T extends { id: number; name: string; primaryImage?: string }> {
   notify: (msg: string, err?: boolean) => void;
 }
 
+// Form state can hold strings (normal fields) or a File (image field, new upload)
+type FormValues = Record<string, string | File | undefined>;
+
 export default function CrudManager<
   T extends { id: number; name: string; primaryImage?: string }
 >({
@@ -54,14 +57,23 @@ export default function CrudManager<
 }: Props<T>) {
   const admin = useRequireAdmin();
   const [editing, setEditing] = useState<T | 'new' | null>(null);
-  const [form, setForm] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<FormValues>({});
   const [busy, setBusy] = useState(false);
 
   if (!admin) return null;
 
   const open = (item?: T) => {
-    const next: Record<string, string> = {};
+    const next: FormValues = {};
     fields.forEach((f) => {
+      if (f.type === 'image') {
+        // For image fields: store the existing URL string (or '' if none).
+        // A new File will replace this when the user picks one.
+        const existing = item
+          ? (item as unknown as Record<string, unknown>)[f.key]
+          : undefined;
+        next[f.key] = typeof existing === 'string' ? existing : '';
+        return;
+      }
       const raw = item
         ? (item as unknown as Record<string, unknown>)[f.key]
         : undefined;
@@ -80,15 +92,28 @@ export default function CrudManager<
     try {
       const values: Record<string, unknown> = {};
       fields.forEach((f) => {
-        const raw = (form[f.key] ?? '').trim();
-        if (!raw && !f.optional && f.type !== 'image')
-          throw new Error(`${f.label} is required`);
+        const rawValue = form[f.key];
+
+        // ── image field: keep the File object if one was chosen ──
         if (f.type === 'image') {
-          if (!raw && !f.optional)
+          if (rawValue instanceof File) {
+            values[f.key] = rawValue;                 // new upload → File
+          } else if (typeof rawValue === 'string' && rawValue.trim()) {
+            values[f.key] = rawValue.trim();          // existing URL (unchanged)
+          } else if (!f.optional) {
             throw new Error(`${f.label} is required`);
-          values[f.key] = form[f.key] ?? '';
+          } else {
+            values[f.key] = undefined;
+          }
           return;
         }
+
+        const raw =
+          typeof rawValue === 'string' ? rawValue.trim() : '';
+
+        if (!raw && !f.optional)
+          throw new Error(`${f.label} is required`);
+
         if (f.type === 'number') {
           const n = Number(raw);
           if (Number.isNaN(n) || n < 0)
@@ -103,6 +128,7 @@ export default function CrudManager<
           values[f.key] = raw;
         }
       });
+
       if (editing === 'new') {
         await onCreate(values);
         notify(`${noun} added`);
@@ -127,6 +153,14 @@ export default function CrudManager<
         notify((err as Error).message, true);
       }
     }
+  };
+
+  // Build the value passed into ImageField. If the form slot holds a File,
+  // build a fresh blob URL for preview (revoked on unmount by the browser).
+  const imageFieldValue = (v: string | File | undefined): string => {
+    if (v instanceof File) return URL.createObjectURL(v);
+    if (typeof v === 'string') return v;
+    return '';
   };
 
   return (
@@ -223,7 +257,11 @@ export default function CrudManager<
                   <textarea
                     id={id}
                     rows={3}
-                    value={form[f.key] ?? ''}
+                    value={
+                      typeof form[f.key] === 'string'
+                        ? (form[f.key] as string)
+                        : ''
+                    }
                     placeholder={f.placeholder}
                     onChange={(e) =>
                       setForm({ ...form, [f.key]: e.target.value })
@@ -232,7 +270,11 @@ export default function CrudManager<
                 ) : f.type === 'select' ? (
                   <select
                     id={id}
-                    value={form[f.key] ?? ''}
+                    value={
+                      typeof form[f.key] === 'string'
+                        ? (form[f.key] as string)
+                        : ''
+                    }
                     onChange={(e) =>
                       setForm({ ...form, [f.key]: e.target.value })
                     }
@@ -245,14 +287,15 @@ export default function CrudManager<
                   </select>
                 ) : f.type === 'image' ? (
                   <ImageField
-                    value={form[f.key] ?? ''}
-                    onChange={(v) =>
+                    value={imageFieldValue(form[f.key])}
+                    onChange={(file) => {
+                      // ImageField calls onChange(File) for a new pick, or
+                      // onChange(null) if the user removes the existing image.
                       setForm({
                         ...form,
-                        [f.key]:
-                          v instanceof File ? URL.createObjectURL(v) : '',
-                      })
-                    }
+                        [f.key]: file ?? '',   // null → '' (no image)
+                      });
+                    }}
                     onError={(msg) => notify(msg, true)}
                   />
                 ) : (
@@ -261,7 +304,11 @@ export default function CrudManager<
                     type={f.type === 'number' ? 'number' : 'text'}
                     min={f.type === 'number' ? 0 : undefined}
                     step={f.type === 'number' ? 'any' : undefined}
-                    value={form[f.key] ?? ''}
+                    value={
+                      typeof form[f.key] === 'string'
+                        ? (form[f.key] as string)
+                        : ''
+                    }
                     placeholder={f.placeholder}
                     onChange={(e) =>
                       setForm({ ...form, [f.key]: e.target.value })
