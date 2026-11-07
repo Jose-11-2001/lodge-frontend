@@ -668,11 +668,15 @@ export const adminApi = {
       true
     );
   },
-  uploadMealImage(mealId: number, file: File): Promise<{ url: string }> {
+  uploadMealImage(
+    mealId: number,
+    file: File,
+    primary = true
+  ): Promise<{ url: string }> {
     const fd = new FormData();
     fd.append('file', file);
     return request<{ url: string }>(
-      `/api/admin/upload/meal/${mealId}`,
+      `/api/admin/upload/meal/${mealId}?primary=${primary}`,
       { method: 'POST', body: fd },
       true
     );
@@ -815,6 +819,7 @@ export function imageUrl(path?: string | null): string {
   if (!path) return '/images/placeholder.jpg';
   return path.startsWith('http') ? path : `${API_BASE}${path}`;
 }
+
 // ── Workers (admin) ────────────────────────────────────────
 
 export interface WorkerDto {
@@ -886,6 +891,7 @@ export const workersApi = {
     return request<void>(`/api/admin/workers/assignments/${assignmentId}`, { method: 'DELETE' }, true);
   },
 };
+
 // ── Meal Orders ─────────────────────────────────────
 
 export interface MealOrderResponse {
