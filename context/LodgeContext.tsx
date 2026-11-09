@@ -511,21 +511,31 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateRoom = async (id: number, data: Partial<Room>): Promise<void> => {
-    try {
-      const req: RoomRequest = {
-        name: data.name ?? '',
-        building: data.building,
-        description: data.description,
-        pricePerNight: data.pricePerNight ?? 0,
-        totalRooms: data.totalRooms ?? 0,
-        amenities: data.amenities,
-      };
-      const r = await adminApi.updateRoom(id, req);
-      setRooms((prev) => prev.map((x) => (x.id === id ? roomFromDto(r) : x)));
-    } catch (e) {
-      throw extractError(e);
+  try {
+    const req: RoomRequest = {
+      name: data.name ?? '',
+      building: data.building,
+      description: data.description,
+      pricePerNight: data.pricePerNight ?? 0,
+      totalRooms: data.totalRooms ?? 0,
+      amenities: data.amenities,
+    };
+    await adminApi.updateRoom(id, req);
+
+    if (data.primaryImage instanceof File) {
+      try {
+        await adminApi.uploadRoomImage(id, data.primaryImage, true);
+      } catch (err) {
+        showToast(`Room updated, but image upload failed: ${(err as Error).message}`, true);
+      }
     }
-  };
+
+    const all = await publicApi.rooms();
+    setRooms(all.map(roomFromDto));
+  } catch (e) {
+    throw extractError(e);
+  }
+};
 
   const deleteRoom = async (id: number): Promise<void> => {
     try {
@@ -566,19 +576,29 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateMeal = async (id: number, data: Partial<Meal>): Promise<void> => {
-    try {
-      const req: MealRequest = {
-        name: data.name ?? '',
-        mealType: data.mealType,
-        description: data.description,
-        price: data.price ?? 0,
-      };
-      const m = await adminApi.updateMeal(id, req);
-      setMeals((prev) => prev.map((x) => (x.id === id ? mealFromDto(m) : x)));
-    } catch (e) {
-      throw extractError(e);
+  try {
+    const req: MealRequest = {
+      name: data.name ?? '',
+      mealType: data.mealType,
+      description: data.description,
+      price: data.price ?? 0,
+    };
+    await adminApi.updateMeal(id, req);
+
+    if (data.primaryImage instanceof File) {
+      try {
+        await adminApi.uploadMealImage(id, data.primaryImage, true);
+      } catch (err) {
+        showToast(`Meal updated, but image upload failed: ${(err as Error).message}`, true);
+      }
     }
-  };
+
+    const all = await publicApi.meals();
+    setMeals(all.map(mealFromDto));
+  } catch (e) {
+    throw extractError(e);
+  }
+};
 
   const deleteMeal = async (id: number): Promise<void> => {
     try {
