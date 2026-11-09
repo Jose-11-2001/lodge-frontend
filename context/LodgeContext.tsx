@@ -29,14 +29,14 @@ import {
   feedbackApi,
   adminApi,
   siteSettingsApi,
-  mealOrdersApi,              // ← NEW IMPORT
+  mealOrdersApi,
   ApiError,
   RoomDto,
   MealDto,
   HallDto,
   BookingResponse,
   HallBookingResponse,
-  MealOrderResponse,          // ← NEW
+  MealOrderResponse,
   FeedbackDto,
   RoomRequest,
   MealRequest,
@@ -189,8 +189,13 @@ const extractError = (e: unknown): Error => {
   return new Error('Unknown error');
 };
 
-export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [toastMessage, setToastMessage] = useState<{ msg: string; err?: boolean } | null>(null);
+export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [toastMessage, setToastMessage] = useState<{
+    msg: string;
+    err?: boolean;
+  } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [user, setUser] = useState<User | null>(null);
@@ -202,7 +207,7 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [hallBookings, setHallBookings] = useState<HallBooking[]>([]);
   const [feedbackList, setFeedbackList] = useState<Feedback[]>([]);
-  const [mealOrders, setMealOrders] = useState<MealOrder[]>([]);   // ← now writable
+  const [mealOrders, setMealOrders] = useState<MealOrder[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
 
   const [lodgeName, setLodgeName] = useState<string>('LodgeApp');
@@ -220,7 +225,11 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const storedUser = localStorage.getItem(USER_KEY);
       const storedRole = localStorage.getItem(ROLE_KEY);
       if (storedUser && storedRole) {
-        setUser({ id: 0, username: storedUser, role: storedRole as User['role'] });
+        setUser({
+          id: 0,
+          username: storedUser,
+          role: storedRole as User['role'],
+        });
       }
     } finally {
       setInitializing(false);
@@ -272,19 +281,23 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ]);
         setBookings(myBookings.map(bookingFromDto));
         setHallBookings(myHallBookings.map(hallBookingFromDto));
-        setMealOrders(myMealOrders.map(mealOrderFromDto));   // ← NEW
+        setMealOrders(myMealOrders.map(mealOrderFromDto));
 
         if (authStore.isAdmin()) {
-          const [allBookings, allHallBookings, allFeedback, allMealOrders] = await Promise.all([
-            adminApi.listBookings({ size: 100 }).catch(() => null),
-            adminApi.listHallBookings({ size: 100 }).catch(() => null),
-            adminApi.listFeedback({ size: 100 }).catch(() => null),
-            mealOrdersApi.adminAll().catch(() => null),         // ← NEW
-          ]);
+          const [allBookings, allHallBookings, allFeedback, allMealOrders] =
+            await Promise.all([
+              adminApi.listBookings({ size: 100 }).catch(() => null),
+              adminApi.listHallBookings({ size: 100 }).catch(() => null),
+              adminApi.listFeedback({ size: 100 }).catch(() => null),
+              mealOrdersApi.adminAll().catch(() => null),
+            ]);
           if (allBookings) setBookings(allBookings.content.map(bookingFromDto));
-          if (allHallBookings) setHallBookings(allHallBookings.content.map(hallBookingFromDto));
-          if (allFeedback) setFeedbackList(allFeedback.content.map(feedbackFromDto));
-          if (allMealOrders) setMealOrders(allMealOrders.map(mealOrderFromDto));
+          if (allHallBookings)
+            setHallBookings(allHallBookings.content.map(hallBookingFromDto));
+          if (allFeedback)
+            setFeedbackList(allFeedback.content.map(feedbackFromDto));
+          if (allMealOrders)
+            setMealOrders(allMealOrders.map(mealOrderFromDto));
         }
       }
     } catch (e) {
@@ -360,7 +373,10 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const payBooking = async (id: number, _method: PaymentMethod): Promise<Booking> => {
+  const payBooking = async (
+    id: number,
+    _method: PaymentMethod
+  ): Promise<Booking> => {
     try {
       await bookingsApi.initiatePayment(id);
       const b = bookings.find((x) => x.id === id);
@@ -403,7 +419,10 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const payHallBooking = async (id: number, _method: PaymentMethod): Promise<HallBooking> => {
+  const payHallBooking = async (
+    id: number,
+    _method: PaymentMethod
+  ): Promise<HallBooking> => {
     try {
       await hallBookingsApi.initiatePayment(id);
       const hb = hallBookings.find((x) => x.id === id);
@@ -426,7 +445,6 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  // ── Meal orders (now backed by real API) ─────────────────
   const createMealOrder = async (data: {
     mealId: number;
     quantity: number;
@@ -442,8 +460,13 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const payMealOrder = async (_id: number, _method: PaymentMethod): Promise<MealOrder> => {
-    throw new Error('Payment for meal orders is not supported yet — pay at reception.');
+  const payMealOrder = async (
+    _id: number,
+    _method: PaymentMethod
+  ): Promise<MealOrder> => {
+    throw new Error(
+      'Payment for meal orders is not supported yet — pay at reception.'
+    );
   };
 
   const cancelMealOrder = async (id: number): Promise<void> => {
@@ -495,7 +518,10 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         try {
           await adminApi.uploadRoomImage(r.id, image, true);
         } catch (err) {
-          showToast(`Room saved, but image upload failed: ${(err as Error).message}`, true);
+          showToast(
+            `Room saved, but image upload failed: ${(err as Error).message}`,
+            true
+          );
         }
         const all = await publicApi.rooms();
         const updated = all.find((x) => x.id === r.id);
@@ -511,31 +537,34 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateRoom = async (id: number, data: Partial<Room>): Promise<void> => {
-  try {
-    const req: RoomRequest = {
-      name: data.name ?? '',
-      building: data.building,
-      description: data.description,
-      pricePerNight: data.pricePerNight ?? 0,
-      totalRooms: data.totalRooms ?? 0,
-      amenities: data.amenities,
-    };
-    await adminApi.updateRoom(id, req);
+    try {
+      const req: RoomRequest = {
+        name: data.name ?? '',
+        building: data.building,
+        description: data.description,
+        pricePerNight: data.pricePerNight ?? 0,
+        totalRooms: data.totalRooms ?? 0,
+        amenities: data.amenities,
+      };
+      await adminApi.updateRoom(id, req);
 
-    if (data.primaryImage instanceof File) {
-      try {
-        await adminApi.uploadRoomImage(id, data.primaryImage, true);
-      } catch (err) {
-        showToast(`Room updated, but image upload failed: ${(err as Error).message}`, true);
+      if (data.primaryImage instanceof File) {
+        try {
+          await adminApi.uploadRoomImage(id, data.primaryImage, true);
+        } catch (err) {
+          showToast(
+            `Room updated, but image upload failed: ${(err as Error).message}`,
+            true
+          );
+        }
       }
-    }
 
-    const all = await publicApi.rooms();
-    setRooms(all.map(roomFromDto));
-  } catch (e) {
-    throw extractError(e);
-  }
-};
+      const all = await publicApi.rooms();
+      setRooms(all.map(roomFromDto));
+    } catch (e) {
+      throw extractError(e);
+    }
+  };
 
   const deleteRoom = async (id: number): Promise<void> => {
     try {
@@ -546,7 +575,10 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const createMeal = async (data: Omit<Meal, 'id'>, image?: File): Promise<Meal> => {
+  const createMeal = async (
+    data: Omit<Meal, 'id'>,
+    image?: File
+  ): Promise<Meal> => {
     try {
       const req: MealRequest = {
         name: data.name,
@@ -558,9 +590,12 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (image) {
         try {
-          await adminApi.uploadMealImage(m.id, image);
+          await adminApi.uploadMealImage(m.id, image, true);
         } catch (err) {
-          showToast(`Meal saved, but image upload failed: ${(err as Error).message}`, true);
+          showToast(
+            `Meal saved, but image upload failed: ${(err as Error).message}`,
+            true
+          );
         }
         const all = await publicApi.meals();
         const updated = all.find((x) => x.id === m.id);
@@ -576,29 +611,32 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateMeal = async (id: number, data: Partial<Meal>): Promise<void> => {
-  try {
-    const req: MealRequest = {
-      name: data.name ?? '',
-      mealType: data.mealType,
-      description: data.description,
-      price: data.price ?? 0,
-    };
-    await adminApi.updateMeal(id, req);
+    try {
+      const req: MealRequest = {
+        name: data.name ?? '',
+        mealType: data.mealType,
+        description: data.description,
+        price: data.price ?? 0,
+      };
+      await adminApi.updateMeal(id, req);
 
-    if (data.primaryImage instanceof File) {
-      try {
-        await adminApi.uploadMealImage(id, data.primaryImage, true);
-      } catch (err) {
-        showToast(`Meal updated, but image upload failed: ${(err as Error).message}`, true);
+      if (data.primaryImage instanceof File) {
+        try {
+          await adminApi.uploadMealImage(id, data.primaryImage, true);
+        } catch (err) {
+          showToast(
+            `Meal updated, but image upload failed: ${(err as Error).message}`,
+            true
+          );
+        }
       }
-    }
 
-    const all = await publicApi.meals();
-    setMeals(all.map(mealFromDto));
-  } catch (e) {
-    throw extractError(e);
-  }
-};
+      const all = await publicApi.meals();
+      setMeals(all.map(mealFromDto));
+    } catch (e) {
+      throw extractError(e);
+    }
+  };
 
   const deleteMeal = async (id: number): Promise<void> => {
     try {
@@ -628,7 +666,10 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         try {
           await adminApi.uploadHallImage(h.id, image, true);
         } catch (err) {
-          showToast(`Hall saved, but image upload failed: ${(err as Error).message}`, true);
+          showToast(
+            `Hall saved, but image upload failed: ${(err as Error).message}`,
+            true
+          );
         }
         const all = await publicApi.halls();
         const updated = all.find((x) => x.id === h.id);
@@ -644,31 +685,34 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateHall = async (id: number, data: Partial<Hall>): Promise<void> => {
-  try {
-    const req: HallRequest = {
-      name: data.name ?? '',
-      building: data.building,
-      description: data.description,
-      capacity: data.capacity ?? 0,
-      pricePerHour: data.pricePerHour ?? 0,
-      pricePerDay: data.pricePerDay,
-    };
-    await adminApi.updateHall(id, req);
+    try {
+      const req: HallRequest = {
+        name: data.name ?? '',
+        building: data.building,
+        description: data.description,
+        capacity: data.capacity ?? 0,
+        pricePerHour: data.pricePerHour ?? 0,
+        pricePerDay: data.pricePerDay,
+      };
+      await adminApi.updateHall(id, req);
 
-    if (data.primaryImage instanceof File) {
-      try {
-        await adminApi.uploadHallImage(id, data.primaryImage, true);
-      } catch (err) {
-        showToast(`Hall updated, but image upload failed: ${(err as Error).message}`, true);
+      if (data.primaryImage instanceof File) {
+        try {
+          await adminApi.uploadHallImage(id, data.primaryImage, true);
+        } catch (err) {
+          showToast(
+            `Hall updated, but image upload failed: ${(err as Error).message}`,
+            true
+          );
+        }
       }
-    }
 
-    const all = await publicApi.halls();
-    setHalls(all.map(hallFromDto));
-  } catch (e) {
-    throw extractError(e);
-  }
-};
+      const all = await publicApi.halls();
+      setHalls(all.map(hallFromDto));
+    } catch (e) {
+      throw extractError(e);
+    }
+  };
 
   const deleteHall = async (id: number): Promise<void> => {
     try {
@@ -685,7 +729,9 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ): Promise<void> => {
     try {
       const b = await adminApi.updateBookingStatus(id, status);
-      setBookings((prev) => prev.map((x) => (x.id === id ? bookingFromDto(b) : x)));
+      setBookings((prev) =>
+        prev.map((x) => (x.id === id ? bookingFromDto(b) : x))
+      );
     } catch (e) {
       throw extractError(e);
     }
@@ -719,7 +765,10 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const resolveFeedback = async (id: number, resolved = true): Promise<void> => {
+  const resolveFeedback = async (
+    id: number,
+    resolved = true
+  ): Promise<void> => {
     try {
       const f = await adminApi.resolveFeedback(id, resolved);
       setFeedbackList((prev) =>
@@ -733,19 +782,49 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <LodgeContext.Provider
       value={{
-        toastMessage, showToast, user, initializing,
-        login, register, logout,
-        rooms, meals, halls, bookings, hallBookings, mealOrders, feedbackList,
-        loading, refresh,
-        lodgeName, logoUrl, refreshSiteSettings, updateLodgeName, uploadLogo,
-        createBooking, payBooking, cancelBooking,
-        createHallBooking, payHallBooking, cancelHallBooking,
-        createMealOrder, payMealOrder, cancelMealOrder,
+        toastMessage,
+        showToast,
+        user,
+        initializing,
+        login,
+        register,
+        logout,
+        rooms,
+        meals,
+        halls,
+        bookings,
+        hallBookings,
+        mealOrders,
+        feedbackList,
+        loading,
+        refresh,
+        lodgeName,
+        logoUrl,
+        refreshSiteSettings,
+        updateLodgeName,
+        uploadLogo,
+        createBooking,
+        payBooking,
+        cancelBooking,
+        createHallBooking,
+        payHallBooking,
+        cancelHallBooking,
+        createMealOrder,
+        payMealOrder,
+        cancelMealOrder,
         createFeedback,
-        createRoom, updateRoom, deleteRoom,
-        createMeal, updateMeal, deleteMeal,
-        createHall, updateHall, deleteHall,
-        updateBookingStatus, updateHallBookingStatus, updateMealOrderStatus,
+        createRoom,
+        updateRoom,
+        deleteRoom,
+        createMeal,
+        updateMeal,
+        deleteMeal,
+        createHall,
+        updateHall,
+        deleteHall,
+        updateBookingStatus,
+        updateHallBookingStatus,
+        updateMealOrderStatus,
         resolveFeedback,
       }}
     >

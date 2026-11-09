@@ -227,4 +227,4 @@ export default function Card({
       )}
     </>
   );
-}
+}{item.itemType === 'halls' && formatMoney(item.pricePerHour)}
