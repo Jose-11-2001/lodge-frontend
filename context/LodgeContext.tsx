@@ -644,21 +644,31 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const updateHall = async (id: number, data: Partial<Hall>): Promise<void> => {
-    try {
-      const req: HallRequest = {
-        name: data.name ?? '',
-        building: data.building,
-        description: data.description,
-        capacity: data.capacity ?? 0,
-        pricePerHour: data.pricePerHour ?? 0,
-        pricePerDay: data.pricePerDay,
-      };
-      const h = await adminApi.updateHall(id, req);
-      setHalls((prev) => prev.map((x) => (x.id === id ? hallFromDto(h) : x)));
-    } catch (e) {
-      throw extractError(e);
+  try {
+    const req: HallRequest = {
+      name: data.name ?? '',
+      building: data.building,
+      description: data.description,
+      capacity: data.capacity ?? 0,
+      pricePerHour: data.pricePerHour ?? 0,
+      pricePerDay: data.pricePerDay,
+    };
+    await adminApi.updateHall(id, req);
+
+    if (data.primaryImage instanceof File) {
+      try {
+        await adminApi.uploadHallImage(id, data.primaryImage, true);
+      } catch (err) {
+        showToast(`Hall updated, but image upload failed: ${(err as Error).message}`, true);
+      }
     }
-  };
+
+    const all = await publicApi.halls();
+    setHalls(all.map(hallFromDto));
+  } catch (e) {
+    throw extractError(e);
+  }
+};
 
   const deleteHall = async (id: number): Promise<void> => {
     try {
