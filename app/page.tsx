@@ -105,7 +105,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Halls */}
+      {/* Halls — FIXED: undefined available → "Book" (not "Booked") */}
       <div className="mt-12">
         {sectionHead('Meeting spaces', 'For workshops, conferences & retreats.', '/halls')}
         <div className={grid}>
@@ -113,8 +113,8 @@ export default function Page() {
             <Card
               key={hall.id}
               item={{ itemType: 'halls', ...hall }}
-              actionLabel={hall.available ? 'Book' : 'Booked'}
-              disabled={!hall.available}
+              actionLabel={hall.available === false ? 'Booked' : 'Book'}
+              disabled={hall.available === false}
               onAction={() => router.push('/halls')}
             />
           ))}

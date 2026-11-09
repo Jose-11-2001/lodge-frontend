@@ -104,7 +104,7 @@ export default function Card({
           </span>
         </button>
 
-        {/* Body — unchanged */}
+        {/* Body */}
         <div className="p-5 flex flex-col gap-2.5 flex-1">
           <h3 className="m-0 text-lg font-bold tracking-tight">{item.name}</h3>
           <p className="text-[var(--muted)] text-[13.5px] leading-relaxed m-0 line-clamp-2">
@@ -227,4 +227,4 @@ export default function Card({
       )}
     </>
   );
-}{item.itemType === 'halls' && formatMoney(item.pricePerHour)}
+}

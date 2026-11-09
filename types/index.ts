@@ -1,3 +1,4 @@
+
 // types.ts
 export type Role = 'ADMIN' | 'CUSTOMER';
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
@@ -18,7 +19,7 @@ export interface Room {
   pricePerNight: number;
   totalRooms: number;
   availableRooms: number;
-  primaryImage?: string;
+  primaryImage?: string | File;
   images?: string[];
   amenities: string[];
 }
@@ -29,7 +30,7 @@ export interface Meal {
   mealType?: MealType;
   description?: string;
   price: number;
-  primaryImage?: string;
+  primaryImage?: string | File;
   images?: string[];
 }
 
@@ -42,7 +43,7 @@ export interface Hall {
   pricePerHour: number;
   pricePerDay?: number;
   available?: boolean;
-  primaryImage?: string;
+  primaryImage?: string | File;
   images?: string[];
 }
 
@@ -58,8 +59,8 @@ export interface Booking {
   createdAt: string;
   paid: boolean;
   totalAmount: number;
-  paymentReference: string | null;   // ← allow null
-  paymentMethod: PaymentMethod | null; // ← allow null
+  paymentReference: string | null;
+  paymentMethod: PaymentMethod | null;
 }
 
 export interface HallBooking {
@@ -75,8 +76,8 @@ export interface HallBooking {
   status: BookingStatus;
   createdAt: string;
   paid: boolean;
-  paymentReference: string | null;     // ← allow null
-  paymentMethod: PaymentMethod | null; // ← allow null
+  paymentReference: string | null;
+  paymentMethod: PaymentMethod | null;
 }
 
 export interface MealOrder {
@@ -90,16 +91,16 @@ export interface MealOrder {
   status: BookingStatus;
   createdAt: string;
   paid: boolean;
-  paymentReference: string | null;     // ← allow null
-  paymentMethod: PaymentMethod | null; // ← allow null
+  paymentReference: string | null;
+  paymentMethod: PaymentMethod | null;
 }
 
 export interface Feedback {
   id: number;
   customerUsername: string;
-  bookingId?: number | null;   // ← optional/nullable
+  bookingId?: number | null;
   rating: number;
-  comment?: string;            // ← optional
+  comment?: string;
   resolved: boolean;
   createdAt: string;
 }
