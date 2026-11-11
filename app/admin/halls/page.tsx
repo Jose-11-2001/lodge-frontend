@@ -36,15 +36,19 @@ export default function AdminHallsPage() {
         { label: 'Capacity', render: (h) => `👥 ${h.capacity}` },
         { label: 'Per hour', render: (h) => money(h.pricePerHour) },
         { label: 'Per day', render: (h) => money(h.pricePerDay) },
-        { label: 'Status', render: (h) => <span className={`badge ${h.available ? 'ok' : 'bad'}`}>{h.available ? 'Available' : 'Booked'}</span> },
+        {
+          label: 'Status',
+          render: (h) => (
+            <span className={`badge ${h.available === false ? 'bad' : 'ok'}`}>
+              {h.available === false ? 'Booked' : 'Available'}
+            </span>
+          ),
+        },
       ]}
       onCreate={async (v) => {
         try {
           const image = v.primaryImage instanceof File ? v.primaryImage : undefined;
-          await createHall(
-            v as unknown as Omit<Hall, 'id' | 'available'>,
-            image
-          );
+          await createHall(v as unknown as Omit<Hall, 'id' | 'available'>, image);
           showToast('Hall added');
         } catch (err) {
           showToast((err as Error).message, true);
