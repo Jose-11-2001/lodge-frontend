@@ -34,16 +34,28 @@ export default function AdminRoomsPage() {
       columns={[
         { label: 'Building', render: (r) => r.building },
         { label: 'Price / night', render: (r) => money(r.pricePerNight) },
-        { label: 'Rooms free', render: (r) => `${r.availableRooms} / ${r.totalRooms}` },
+        {
+          label: 'Available (tonight)',
+          render: (r) => {
+            const free = r.availableRooms;
+            const total = r.totalRooms;
+            const booked = total - free;
+            const tone =
+              free <= 0 ? 'bad' : free <= total * 0.3 ? 'warn' : 'ok';
+            return (
+              <span className={`badge ${tone}`}>
+                {free} / {total}
+                {booked > 0 ? ` · ${booked} booked` : ''}
+              </span>
+            );
+          },
+        },
         { label: 'Amenities', render: (r) => r.amenities.join(' · ') || '—' },
       ]}
       onCreate={async (v) => {
         try {
           const image = v.primaryImage instanceof File ? v.primaryImage : undefined;
-          await createRoom(
-            v as unknown as Omit<Room, 'id' | 'availableRooms'>,
-            image
-          );
+          await createRoom(v as unknown as Omit<Room, 'id' | 'availableRooms'>, image);
           showToast('Room added');
         } catch (err) {
           showToast((err as Error).message, true);
