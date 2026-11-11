@@ -38,7 +38,7 @@ export default function Card({
 
   const formatMoney = (val: number) => `K ${val.toFixed(2)}`;
 
-  // Close on Escape key + lock body scroll while open
+  
   useEffect(() => {
     if (!zoomOpen) return;
     const onKey = (e: KeyboardEvent) => {
