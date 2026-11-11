@@ -46,7 +46,7 @@ export default function Page() {
         </div>
 
         <h2 className="m-0 mb-4 font-fraunces font-bold text-[clamp(32px,5vw,58px)] leading-[1.03] tracking-[-1px] max-w-[760px]">
-          Stay, meet & dine{' '}
+           Mbukwa Jose  maziya Stay, meet & dine{' '}
           <em className="italic bg-[image:var(--grad-1)] bg-[length:200%_100%] bg-clip-text text-transparent animate-[gradientShift_6s_ease_infinite]">
             beautifully
           </em>
