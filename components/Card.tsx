@@ -38,7 +38,6 @@ export default function Card({
 
   const formatMoney = (val: number) => `K ${val.toFixed(2)}`;
 
-  
   useEffect(() => {
     if (!zoomOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -56,7 +55,6 @@ export default function Card({
   return (
     <>
       <div className="bg-[var(--card)] backdrop-blur-md border border-[var(--line)] rounded-[var(--radius)] overflow-hidden flex flex-col transition-all duration-300 hover:-translate-y-1.5 hover:border-[var(--line-2)] hover:shadow-[var(--shadow-md)] shadow-[var(--shadow-sm)]">
-        {/* Thumbnail — clickable to open zoom */}
         <button
           type="button"
           onClick={() => setZoomOpen(true)}
@@ -98,13 +96,11 @@ export default function Card({
             </div>
           )}
 
-          {/* Small zoom hint on hover */}
           <span className="absolute bottom-3 right-3 z-10 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-[rgba(0,0,0,0.6)] text-white backdrop-blur-md border border-[rgba(255,255,255,0.15)] opacity-0 group-hover:opacity-100 transition-opacity">
             Zoom
           </span>
         </button>
 
-        {/* Body */}
         <div className="p-5 flex flex-col gap-2.5 flex-1">
           <h3 className="m-0 text-lg font-bold tracking-tight">{item.name}</h3>
           <p className="text-[var(--muted)] text-[13.5px] leading-relaxed m-0 line-clamp-2">
@@ -166,17 +162,44 @@ export default function Card({
           </div>
 
           <div className="flex items-center justify-between gap-2.5 mt-auto pt-2.5">
-            <div className="font-fraunces font-bold text-[22px] bg-[image:var(--grad-2)] bg-clip-text text-transparent">
-              {item.itemType === 'rooms' && formatMoney(item.pricePerNight)}
-              {item.itemType === 'meals' && formatMoney(item.price)}
-              {item.itemType === 'halls' && formatMoney(item.pricePerHour)}
-              <small className="font-sans text-xs font-medium text-[var(--muted)] ml-0.5">
-                {item.itemType === 'rooms'
-                  ? '/ night'
-                  : item.itemType === 'meals'
-                  ? 'each'
-                  : '/ hour'}
-              </small>
+            <div className="flex flex-col gap-0.5">
+              {item.itemType === 'rooms' && (
+                <div className="font-fraunces font-bold text-[22px] text-[var(--text)]">
+                  {formatMoney(item.pricePerNight)}
+                  <small className="font-sans text-xs font-medium text-[var(--muted)] ml-0.5">
+                    / night
+                  </small>
+                </div>
+              )}
+
+              {item.itemType === 'meals' && (
+                <div className="font-fraunces font-bold text-[22px] text-[var(--text)]">
+                  {formatMoney(item.price)}
+                  <small className="font-sans text-xs font-medium text-[var(--muted)] ml-0.5">
+                    each
+                  </small>
+                </div>
+              )}
+
+              {item.itemType === 'halls' && (
+                <>
+                  <div className="font-fraunces font-bold text-[22px] text-[var(--text)]">
+                    {formatMoney(item.pricePerHour)}
+                    <small className="font-sans text-xs font-medium text-[var(--muted)] ml-0.5">
+                      / hour
+                    </small>
+                  </div>
+                  {typeof item.pricePerDay === 'number' &&
+                    item.pricePerDay > 0 && (
+                      <div className="font-fraunces font-bold text-[16px] text-[var(--text)]">
+                        {formatMoney(item.pricePerDay)}
+                        <small className="font-sans text-xs font-medium text-[var(--muted)] ml-0.5">
+                          / day
+                        </small>
+                      </div>
+                    )}
+                </>
+              )}
             </div>
 
             {onAction && (
@@ -192,7 +215,6 @@ export default function Card({
         </div>
       </div>
 
-      {/* ── Zoom lightbox ─────────────────────────────── */}
       {zoomOpen && (
         <div
           role="dialog"
