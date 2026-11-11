@@ -1,13 +1,7 @@
 /**
  * api.ts — client for Lodge App backend
  * Base URL: https://lodge-app-2plf.onrender.com
- *
- * Works in plain JS too — just compile TS or use this file directly.
  */
-
-// ─────────────────────────────────────────────────────────────
-// Config
-// ─────────────────────────────────────────────────────────────
 
 const isLocal =
   typeof window !== 'undefined' &&
@@ -22,25 +16,10 @@ const TOKEN_KEY = 'lodge_token';
 const ROLE_KEY = 'lodge_role';
 const USER_KEY = 'lodge_username';
 
-// ─────────────────────────────────────────────────────────────
-// Types (mirror your /v3/api-docs schemas)
-// ─────────────────────────────────────────────────────────────
+// ── Types ─────────────────────────────────────────────────
 
-/**
- * Statuses the UI may READ from the backend.
- * 'COMPLETED' is allowed here purely for display/filtering — it is NOT
- * returned by the current backend, and MUST NOT be sent back (see below).
- */
 export type BookingStatus = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
-
-/**
- * Statuses the backend's `status` enum actually accepts
- * (per /v3/api-docs → PATCH /api/admin/{bookings,hall-bookings}/{id}/status
- *  and the `status` query param on GET list endpoints).
- * Use this type for anything that will be sent to the API.
- */
 export type BookingStatusInput = 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
-
 export type PaymentMethod = 'CARD' | 'MOBILE_MONEY' | 'BANK_TRANSFER' | 'CASH';
 export type HallBillingMode = 'HOURLY' | 'DAILY';
 export type Role = 'ADMIN' | 'CUSTOMER';
@@ -60,7 +39,7 @@ export interface RoomDto {
   pricePerNight: number;
   totalRooms: number;
   availableRooms: number;
-  primaryImage?: string;
+  primaryImage?: string | File;      // ← changed
   images?: string[];
   amenities: string[];
 }
@@ -80,7 +59,7 @@ export interface MealDto {
   mealType?: MealType;
   description?: string;
   price: number;
-  primaryImage?: string;
+  primaryImage?: string | File;      // ← changed
   images?: string[];
 }
 
@@ -100,7 +79,7 @@ export interface HallDto {
   pricePerHour: number;
   pricePerDay?: number;
   available?: boolean;
-  primaryImage?: string;
+  primaryImage?: string | File;      // ← changed
   images?: string[];
 }
 
@@ -215,9 +194,7 @@ export interface Page<T> {
   empty: boolean;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Token management (SSR-safe)
-// ─────────────────────────────────────────────────────────────
+// ── Token management (SSR-safe) ─────────────────────────
 
 const isBrowser = typeof window !== 'undefined';
 
@@ -254,9 +231,7 @@ export const auth = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Low-level fetch wrapper
-// ─────────────────────────────────────────────────────────────
+// ── Low-level fetch wrapper ─────────────────────────────
 
 export class ApiError extends Error {
   status: number;
@@ -289,8 +264,6 @@ async function request<T>(
 
   if (res.status === 401 || res.status === 403) {
     auth.logout();
-    // App Router: the login page is /login, NOT /login.html.
-    // The old .html path 404'd and looked like a routing bug.
     if (
       typeof window !== 'undefined' &&
       !window.location.pathname.startsWith('/login')
@@ -322,9 +295,7 @@ async function request<T>(
   return (await res.text()) as unknown as T;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Auth
-// ─────────────────────────────────────────────────────────────
+// ── Auth ────────────────────────────────────────────────
 
 export const authApi = {
   async login(username: string, password: string): Promise<AuthResponse> {
@@ -352,9 +323,7 @@ export const authApi = {
   logout: auth.logout,
 };
 
-// ─────────────────────────────────────────────────────────────
-// Public browsing (no login required)
-// ─────────────────────────────────────────────────────────────
+// ── Public browsing ─────────────────────────────────────
 
 export const publicApi = {
   async rooms(params?: {
@@ -405,9 +374,7 @@ export const publicApi = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Customer bookings (login required)
-// ─────────────────────────────────────────────────────────────
+// ── Customer bookings ───────────────────────────────────
 
 export const bookingsApi = {
   create(req: BookingRequest): Promise<BookingResponse> {
@@ -462,9 +429,7 @@ export const bookingsApi = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Customer hall bookings (login required)
-// ─────────────────────────────────────────────────────────────
+// ── Customer hall bookings ──────────────────────────────
 
 export const hallBookingsApi = {
   create(req: HallBookingRequest): Promise<HallBookingResponse> {
@@ -523,9 +488,7 @@ export const hallBookingsApi = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Feedback (login required)
-// ─────────────────────────────────────────────────────────────
+// ── Feedback ────────────────────────────────────────────
 
 export const feedbackApi = {
   submit(req: FeedbackRequest): Promise<FeedbackDto> {
@@ -537,9 +500,7 @@ export const feedbackApi = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Notifications (login required)
-// ─────────────────────────────────────────────────────────────
+// ── Notifications ───────────────────────────────────────
 
 export const notificationsApi = {
   list(page = 0, size = 20): Promise<Page<NotificationDto>> {
@@ -571,9 +532,7 @@ export const notificationsApi = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Admin (ADMIN role required)
-// ─────────────────────────────────────────────────────────────
+// ── Admin ───────────────────────────────────────────────
 
 export const adminApi = {
   // Rooms
@@ -775,9 +734,7 @@ export const adminApi = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Site settings (lodge name + logo)
-// ─────────────────────────────────────────────────────────────
+// ── Site settings ───────────────────────────────────────
 
 export interface SiteSettingsDto {
   lodgeName: string;
@@ -785,12 +742,10 @@ export interface SiteSettingsDto {
 }
 
 export const siteSettingsApi = {
-  /** Public — used by the header on every page. */
   async read(): Promise<SiteSettingsDto> {
     return request<SiteSettingsDto>('/api/public/site-settings');
   },
 
-  /** Admin — update the lodge name. */
   async updateName(lodgeName: string): Promise<SiteSettingsDto> {
     return request<SiteSettingsDto>(
       '/api/admin/site-settings/name',
@@ -799,7 +754,6 @@ export const siteSettingsApi = {
     );
   },
 
-  /** Admin — upload a new logo image. */
   async uploadLogo(file: File): Promise<SiteSettingsDto> {
     const fd = new FormData();
     fd.append('file', file);
@@ -811,16 +765,15 @@ export const siteSettingsApi = {
   },
 };
 
-// ─────────────────────────────────────────────────────────────
-// Convenience: build absolute image URL
-// ─────────────────────────────────────────────────────────────
+// ── Image URL helper ────────────────────────────────────
 
-export function imageUrl(path?: string | null): string {
+export function imageUrl(path?: string | File | null): string {
   if (!path) return '/images/placeholder.jpg';
+  if (path instanceof File) return URL.createObjectURL(path);
   return path.startsWith('http') ? path : `${API_BASE}${path}`;
 }
 
-// ── Workers (admin) ────────────────────────────────────────
+// ── Workers (admin) ─────────────────────────────────────
 
 export interface WorkerDto {
   id: number;
@@ -892,7 +845,7 @@ export const workersApi = {
   },
 };
 
-// ── Meal Orders ─────────────────────────────────────
+// ── Meal Orders ─────────────────────────────────────────
 
 export interface MealOrderResponse {
   id: number;
