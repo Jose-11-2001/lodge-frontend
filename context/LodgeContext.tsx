@@ -262,16 +262,22 @@ export const LodgeProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [r, m, h] = await Promise.all([
-        publicApi.rooms(),
-        publicApi.meals(),
-        publicApi.halls(),
-      ]);
-      setRooms(r.map(roomFromDto));
-      setMeals(m.map(mealFromDto));
-      setHalls(h.map(hallFromDto));
+  setLoading(true);
+  try {
+    const today = new Date();
+    const tomorrow = new Date(Date.now() + 86_400_000);
+    const ymd = (d: Date) => d.toISOString().slice(0, 10);
+    const startIso = `${ymd(today)}T00:00:00`;
+    const endIso = `${ymd(tomorrow)}T23:59:59`;
+
+    const [r, m, h] = await Promise.all([
+      publicApi.rooms({ checkIn: ymd(today), checkOut: ymd(tomorrow) }),
+      publicApi.meals(),
+      publicApi.halls({ start: startIso, end: endIso }),
+    ]);
+    setRooms(r.map(roomFromDto));
+    setMeals(m.map(mealFromDto));
+    setHalls(h.map(hallFromDto));
 
       if (authStore.isLoggedIn()) {
         const [myBookings, myHallBookings, myMealOrders] = await Promise.all([
